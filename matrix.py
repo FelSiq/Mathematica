@@ -35,6 +35,23 @@ def mmult(m1, m2):
 		for j in range(m2Col):
 			for k in range(m1Col):
 				m3[i][j] += m1[i][k] * m2[k][j]
+	# If matrix resultant is a 1x1, then it was just a dot product and, then, return just the value
+	return m3 if len(m3) > 1 else m3[0][0]
+
+def msub(m1, m2):
+	m1Col = len(m1[0])
+	m2Col = len(m2[0])
+	m1Row = len(m1)
+	m2Row = len(m2)
+	
+	if m1Col != m1Col or m2Row != m2Row:
+		print('E: can\'t subtract two matrices with different dimensions.')
+	
+	m3 = minit(m1Row, m2Col)
+	for i in range(m1Row):
+		for j in range(m2Col):
+			m3[i][j] = m1[i][j] - m2[i][j]
+	
 	return m3
 
 def mcopy(m):
@@ -53,6 +70,17 @@ def mrowswap(m, row1, row2):
 	mSwap[row1], mSwap[row2] = mSwap[row2], mSwap[row1]
 	
 	return mmult(mSwap, mCopy)
+
+def mmconst(m, const):
+	mRow = len(m)
+	mCol = len(m[0])
+
+	n = minit(mRow, mCol)
+	for i in range(mRow):
+		for j in range(mCol):
+			n[i][j] = m[i][j] * const
+
+	return n
 
 def mprint(m):
 	for i in m:
