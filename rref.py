@@ -1,27 +1,27 @@
 with open('matrix.py', 'r') as f:
 	exec(f.read())
 
-def rref(m, reduced = True):
+def rref(m, reduced = True, returnReduced = True):
 	# if pivot, in module, is smaller than DELTA, assume it's zero
 	DELTA = 1.0e-10
 
 	mCol = len(m[0])
 	mRow = len(m)
 
-	mCopy = mcopy(m)
-	mAug = midentity(mRow)
+	mReduced = mcopy(m)
+	matReverse = midentity(mRow)
 
 	shift = 0
 	i = 0
 	while i < mRow and i + shift < mCol:
-		pivot = mCopy[i][i + shift]
+		pivot = mReduced[i][i + shift]
 
 		# Check for row exchanges
 		p = i + 1
 		while abs(pivot) < DELTA and p < mRow:
-			mCopy = mrowswap(mCopy, i, p)
-			mAug = mrowswap(mAug, i, p)
-			pivot = mCopy[i][i + shift]
+			mReduced = mrowswap(mReduced, i, p)
+			matReverse = mrowswap(matReverse, i, p)
+			pivot = mReduced[i][i + shift]
 			p += 1
 
 		# If pivot is still zero, after all possible row exchanges, 
@@ -32,20 +32,22 @@ def rref(m, reduced = True):
 			# Just some row operations with the augmented matrix
 			for j in range(i * (not reduced), mRow):
 				if j != i:
-					multiplier = mCopy[j][i + shift]/pivot
+					multiplier = mReduced[j][i + shift]/pivot
 					for k in range(mCol):
-						mCopy[j][k] -= mCopy[i][k] * multiplier 
+						mReduced[j][k] -= mReduced[i][k] * multiplier 
 					for k in range(mRow):
-						mAug[j][k] -= mAug[i][k] * multiplier
+						matReverse[j][k] -= matReverse[i][k] * multiplier
 			# Set the pivots to 1
 			if reduced:
 				for k in range(mCol):
-					mCopy[i][k] /= pivot
+					mReduced[i][k] /= pivot
 				for k in range(mRow):
-					mAug[i][k] /= pivot
+					matReverse[i][k] /= pivot
 			i += 1
 
-	return mCopy, mAug
+	if (returnReduced):
+		return mReduced, matReverse
+	return matReverse
 
 # Program drive
 """
