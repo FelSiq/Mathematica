@@ -1,3 +1,4 @@
+import operator
 import math
 import sys
 
@@ -40,12 +41,14 @@ class graph:
 					if geometrical:
 						nodeCoord = list(map(float, tokens[2:]))
 						newCoordDim = len(nodeCoord)
-						if dimension > 0:
-							if  newCoordDim > self.dimension:
-								print('w:', nodeLabel, 'node coordinates has more dimensions than graph. I\'ll use the projection.')
+						if self.dimension > 0:
+							if newCoordDim > self.dimension:
+								print('w: \'' + nodeLabel + 
+									'\' node coordinates has more dimensions than graph. I\'ll use the projection.')
 								nodeCoord = nodeCoord[:self.dimension]
 							elif newCoordDim < self.dimension:
-								print('w:', nodeLabel, 'node coordinates has less dimensions than graph.')
+								print('w: \'' + nodeLabel + 
+									'\' node coordinates has less dimensions than graph. Filling with \'0\'.')
 								nodeCoord += [0.0] * (self.dimension - newCoordDim)
 						else:
 							self.dimension = len(nodeCoord)
@@ -130,7 +133,7 @@ class graph:
 			if curNode != end:
 				adjList = list(self.edgeList[curNode]['adj'].keys())
 				if lexicographical:
-					adjList.sort()
+					adjList.sort(reverse=depthFirst)
 
 				for a in adjList:
 					if (prune and not visitedVec[a]) or not (prune or self._checkPreds(predVec, curNode, a)):
@@ -182,20 +185,18 @@ class graph:
 						output['totalChildrens'] += statisticOutput
 						predVec[a] = curNode
 						newChildren = (a, self._calcDist(a, end))
-						if depthFirst:
-							auxList.append(newChildren)
-						else:
-							auxList.insert(0, newChildren)
+						auxList.append(newChildren)
 				
-				# Sort based on which children node is heuristically closer to the objective
-				auxList.sort(key=lambda item : item[1], reverse = True)
-				if keptChildrens > 0:
-					auxList = auxList[:keptChildrens]
+				# Sort based on which children node is heuristically closer to the objective,
+				# then use lexicographical order in case of draw.
 
 				if depthFirst:
+					auxList.sort(key=operator.itemgetter(1, 0), reverse=True)
 					deque = deque + auxList
 				else:
 					deque = auxList + deque
+					deque.sort(key=operator.itemgetter(1))
+					deque[:keptChildrens]
 
 			else:
 				deque.clear()
@@ -204,23 +205,25 @@ class graph:
 
 		return self._updateOutput(output, statisticOutput)
 
-	# MUST BE TESTED!
 	def dfs(self, start, end, prune=True, lexicographical=True, statisticOutput=False):
 		return self._blindSearch(start, end, True, prune, statisticOutput, lexicographical)
 
-	# MUST BE TESTED!
 	def bfs(self, start, end, prune=True, lexicographical=True, statisticOutput=False):
 		return self._blindSearch(start, end, False, prune, statisticOutput, lexicographical)
 
-	# MUST BE TESTED!
+	"""
+	Hill climbing is a DFS that proceed first into children node that is closest to the goal.
+	"""
 	def hillClimbing(self, start, end, prune=True, statisticOutput=False):
 		if not self.geometrical:
 			print('error: hillClimbing works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
-		return self._informedSearch(start, end, False, prune, statisticOutput, 0)
+		return self._informedSearch(start, end, True, prune, statisticOutput)
 
-	# MUST BE TESTED!
+	"""
+	Beam Search is like BFS, but it does only keep w childrens that is closer to the goal per search tree level.
+	"""
 	def beamSearch(self, start, end, keptChildren=2, prune=True, statisticOutput=False):
 		if not self.geometrical:
 			print('error: beamSearch works only with',
@@ -228,7 +231,9 @@ class graph:
 			return None
 		return self._informedSearch(start, end, False, prune, statisticOutput, keptChildren)
 
-	# TO BE TESTED!
+	"""
+	This is Branch And Bound algorithm. To be fair, it's exactly the same as Dijkstra's Algorithm.
+	"""
 	def branchAndBound(self, start, end, prune=False, admissibleHeuristic=False, statisticOutput=False):
 		if admissibleHeuristic and not self.geometrical:
 			print('error: a admissible heuristic works only with',
@@ -277,7 +282,15 @@ class graph:
 
 		return self._updateOutput(output, statisticOutput)
 
-	# MUST BE TESTED!
+	"""
+	A* is just Branch and Bound (or Dijkstra's algorhtm) without revisiting nodes and with a admissible heuristic.
+
+	A admissible heuristic is a value that is always less or equal than the true value, i.e, it never overestimate
+	the total value/cost/distance/etc to the goal. For example, if you take a straight line between two points, 
+	desconsidering if there is any obstacle or other constraint between then, it is a admissible heuristic, because 
+	the straight line is the smallest distance between two points, no matter if this straight path is or ins't possible
+	to be done.
+	"""
 	def Astar(self, start, end, statisticOutput=False):
 		return self.branchAndBound(start, end, prune=True, admissibleHeuristic=True, statisticOutput=statisticOutput)
 
@@ -293,8 +306,8 @@ if __name__ == '__main__':
 	G = graph(sys.argv[1], geometrical = True, directed=False)
 	G.print()
 	print('\n')
-	print('DFS:', G.dfs(start, end, prune=True, lexicographical=True, statisticOutput=True))
-	print('BFS:', G.bfs(start, end, prune=True, lexicographical=True, statisticOutput=True))
+	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, statisticOutput=True))
+	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, statisticOutput=True))
 	print('HC:', G.hillClimbing(start, end, statisticOutput=True))
 	print('BS:', G.beamSearch(start, end, statisticOutput=True, keptChildren=2))
 	print('B&B:', G.branchAndBound(start, end, statisticOutput=True))
