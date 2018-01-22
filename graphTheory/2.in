@@ -1,0 +1,14 @@
+node S 0 0
+node A 3 0
+node B 3 4
+node C 3 8
+node E 9 8
+node D 6 0 
+node G 9 4
+edge S A
+edge S B
+edge B A
+edge B C
+edge E C
+edge A D
+edge G D
