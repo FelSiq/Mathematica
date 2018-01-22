@@ -76,7 +76,7 @@ class graph:
 			output.pop('totalChildrens')
 		return output
 
-	def _blindSearch(self, start, end, depthFirst, prune=True, statisticOutput=False):
+	def _blindSearch(self, start, end, depthFirst, prune=True, statisticOutput=False, lexicographical=True):
 		output = self._genOutput()
 
 		predVec = {key : '' for key in self.edgeList}
@@ -90,8 +90,12 @@ class graph:
 			visitedVec[curNode] = True
 
 			if curNode != end:
-				for a in self.edgeList[curNode]['adj']:
-					if not visitedVec[a]:
+				adjList = list(self.edgeList[curNode]['adj'].keys())
+				if lexicographical:
+					adjList.sort()
+
+				for a in adjList:
+					if not (prune and visitedVec[a]):
 						output['totalChildrens'] += statisticOutput
 						predVec[a] = curNode
 						if depthFirst:
@@ -105,11 +109,11 @@ class graph:
 
 		return self._updateOutput(output, statisticOutput)
 
-	def dfs(self, start, end, prune=True, statisticOutput=False):
-		return self._blindSearch(start, end, True, prune, statisticOutput)
+	def dfs(self, start, end, prune=True, lexicographical=True, statisticOutput=False):
+		return self._blindSearch(start, end, True, prune, statisticOutput, lexicographical)
 
-	def bfs(self, start, end, prune=True, statisticOutput=False):
-		return self._blindSearch(start, end, False, prune, statisticOutput)
+	def bfs(self, start, end, prune=True, lexicographical=True, statisticOutput=False):
+		return self._blindSearch(start, end, False, prune, statisticOutput, lexicographical)
 
 	def hillClimbing(self, start, end):
 		if not self.dimension:
@@ -137,5 +141,5 @@ if __name__ == '__main__':
 	G = graph('1.in', dimension = 3)
 	G.setCoord({'B': [1,2,3], 'C':[5,5,5], 'D':[10,15,10]})
 	G.print(decorate=True)
-	print(G.dfs('A', 'D', statisticOutput=True))
-	print(G.bfs('A', 'D', statisticOutput=True))
+	print(G.dfs('A', 'D', prune=True, lexicographical=False, statisticOutput=True))
+	print(G.bfs('A', 'D', prune=True, lexicographical=False, statisticOutput=True))
