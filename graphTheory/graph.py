@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import operator
 import math
 import sys
@@ -294,6 +295,22 @@ class graph:
 	def Astar(self, start, end, statisticOutput=False):
 		return self.branchAndBound(start, end, prune=True, admissibleHeuristic=True, statisticOutput=statisticOutput)
 
+	def plot(self):
+		x =[]
+		y =[]
+		nodes = self.edgeList.keys()
+		for k in nodes:
+			node = self.edgeList[k]['coord']
+			x.append(node[0])
+			y.append(node[1])
+		for k in nodes:
+			for a in self.edgeList[k]['adj']:
+				kCoord = self.edgeList[k]['coord']
+				aCoord = self.edgeList[a]['coord']
+				plt.plot([kCoord[0], aCoord[0]], [kCoord[1], aCoord[1]], color='black')
+		plt.scatter(x=x, y=y)
+		plt.show()
+
 if __name__ == '__main__':
 
 	if len(sys.argv) <= 3:
@@ -305,6 +322,8 @@ if __name__ == '__main__':
 
 	G = graph(sys.argv[1], geometrical = True, directed=False)
 	G.print()
+	G.plot()
+
 	print('\n')
 	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, statisticOutput=True))
 	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, statisticOutput=True))
