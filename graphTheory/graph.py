@@ -350,26 +350,28 @@ class graph:
 			accumulatedDist = curItem[1]
 			visitedVec[curNode] = True
 
-			if curNode != end:
-				adjList = list(self.edgeList[curNode]['adj'].keys())
+			if accumulatedDist < minPathLen:
+				if curNode != end:
+					adjList = list(self.edgeList[curNode]['adj'].keys())
 
-				for a in adjList:
-					if (prune and not visitedVec[a]) or not (prune or self._checkPreds(predVec, curNode, a)):
-						totalDist = accumulatedDist + self.edgeList[curNode]['adj'][a]
-						if totalDist < minPathLen:
-							output['totalChildrens'] += statisticOutput
-							predVec[a] = curNode
-							newChildren = (a, totalDist, self._calcDist(a, end))
-							minHeap.append(newChildren)
-					
-				# Sort based on which children node is heuristically closer to the objective
-				if admissibleHeuristic:
-					minHeap.sort(key=lambda item : item[1] + item[2], reverse=True)
+					for a in adjList:
+						if (prune and not visitedVec[a]) or not (prune or self._checkPreds(predVec, curNode, a)):
+							totalDist = accumulatedDist + self.edgeList[curNode]['adj'][a]
+							if totalDist < minPathLen:
+								output['totalChildrens'] += statisticOutput
+								predVec[a] = curNode
+								newChildren = (a, totalDist, self._calcDist(a, end))
+								minHeap.append(newChildren)
+								if a == end:
+									minPathLen = totalDist
+						
+					# Sort based on which children node is heuristically closer to the objective
+					if admissibleHeuristic:
+						minHeap.sort(key=lambda item : item[1] + item[2], reverse=True)
+					else:
+						minHeap.sort(key=lambda item : item[1], reverse=True)
 				else:
-					minHeap.sort(key=lambda item : item[1], reverse=True)
-
-			else:
-				minPathLen = min(minPathLen, accumulatedDist)
+					minPathLen = min(minPathLen, accumulatedDist)
 
 		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
 
