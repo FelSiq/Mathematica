@@ -9,6 +9,7 @@ class graph:
 		self.edgeList = {}
 		self.label = label
 		self.geometrical = geometrical
+		self.plotPathList = []
 
 		if dimension < 0:
 			print('w: graph space dimension set to 0 (can\'t use negative values).')
@@ -92,6 +93,14 @@ class graph:
 			self.edgeList[c]['coord'] = coordinates[c][:self.dimension]
 
 
+	def _searchPlotSetup(self, title, start, end):
+		self.plot(show=False)
+		plt.gcf().gca().add_artist(plt.Circle(tuple(self.edgeList[end]['coord']), 10, color='blue', fill=False))
+		plt.gcf().gca().add_artist(plt.Circle(tuple(self.edgeList[start]['coord']), 10, color='green', fill=False))
+		plt.title(title)
+		plt.ion()
+
+
 	def _genOutput(self):
 		return {'distance': 0.0, 'path': [], 
 			'iterations' : 0, 'totalChildrens' : 0}
@@ -125,9 +134,7 @@ class graph:
 		output = self._genOutput()
 
 		if plot:
-			self.plot(show=False)
-			plt.title(title)
-			plt.ion()
+			self._searchPlotSetup(title, start, end)
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
@@ -190,9 +197,7 @@ class graph:
 		output = self._genOutput()
 
 		if plot:
-			self.plot(show=False)
-			plt.title(title)
-			plt.ion()
+			self._searchPlotSetup(title, start, end)
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
@@ -231,8 +236,10 @@ class graph:
 					deque = deque + auxList
 				else:
 					deque = auxList + deque
-					deque.sort(key=operator.itemgetter(1))
-					deque[:keptChildrens]
+					deque.sort(key=operator.itemgetter(1), reverse = True)
+					size = len(deque)
+					if size > keptChildrens:
+						deque[size - keptChildrens:size]
 
 			else:
 				deque.clear()
@@ -271,7 +278,7 @@ class graph:
 	"""
 	Beam Search is like BFS, but it does only keep w childrens that is closer to the goal per search tree level.
 	"""
-	def beamSearch(self, start, end, keptChildren=2, prune=True, 
+	def beamSearch(self, start, end, keptChildren=3, prune=True, 
 		statisticOutput=False, plot=False, plotSpeed=0.2):
 		if not self.geometrical:
 			print('error: beamSearch works only with',
@@ -290,18 +297,19 @@ class graph:
 		curNode = start
 		curPosition = self.edgeList[curNode]['coord']
 
-		for k in self.edgeList.keys():
-			for a in self.edgeList[k]['adj']:
-				kCoord = self.edgeList[k]['coord']
-				aCoord = self.edgeList[a]['coord']
-				plt.plot([kCoord[0], aCoord[0]], [kCoord[1], aCoord[1]], color='black')
+		while len(self.plotPathList):
+			path = self.plotPathList.pop()
+			plt.plot(path[0], path[1], color='black')
 
 		while curNode != '':
 			prevPosition = curPosition
 			curNode = predVec[curNode]
 			if curNode != '':
 				curPosition = self.edgeList[curNode]['coord']
-				plt.plot([prevPosition[0], curPosition[0]], [prevPosition[1], curPosition[1]], color='Red')
+				plotXs = [prevPosition[0], curPosition[0]]
+				plotYs = [prevPosition[1], curPosition[1]]
+				self.plotPathList.append((plotXs, plotYs))
+				plt.plot(plotXs, plotYs, color='red')
 
 
 	"""
@@ -315,9 +323,7 @@ class graph:
 			return None
 		
 		if plot:
-			self.plot(show=False)
-			plt.title(title)
-			plt.ion()
+			self._searchPlotSetup(title, start, end)
 
 		output = self._genOutput()
 
@@ -404,7 +410,7 @@ class graph:
 				kCoord = self.edgeList[k]['coord']
 				aCoord = self.edgeList[a]['coord']
 				plt.plot([kCoord[0], aCoord[0]], [kCoord[1], aCoord[1]], color='black')
-		plt.scatter(x=x, y=y)
+		plt.scatter(x=x, y=y, color='blue')
 
 		if show:
 			plt.pause(min(0.0, time))
@@ -412,20 +418,29 @@ class graph:
 if __name__ == '__main__':
 
 	if len(sys.argv) <= 4:
-		print('usage: <graph filepath> <start> <end> <plot? 0/1>')
+		print('usage: <graph filepath> <start> <end> <plot? 0/1> <plotDelay (optional)>')
 		exit(1)
 
 	start = sys.argv[2]
 	end = sys.argv[3]
 	plot = bool(int(sys.argv[4]))
 
+	plotDelay = 0.025
+	if len(sys.argv) >= 6:
+		plotDelay = float(sys.argv[5])
+
 	G = graph(sys.argv[1], geometrical = True, directed=False)
 	G.print()
 
 	print('\n')
-	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, statisticOutput=True, plot=plot))
-	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, statisticOutput=True, plot=plot))
-	print('HC:', G.hillClimbing(start, end, statisticOutput=True, plot=plot))
-	print('BS:', G.beamSearch(start, end, statisticOutput=True, keptChildren=2, plot=plot))
-	print('B&B:', G.branchAndBound(start, end, statisticOutput=True, plot=plot))
+	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, 
+		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
+	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, 
+		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
+	print('HC:', G.hillClimbing(start, end, 
+		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
+	print('BS:', G.beamSearch(start, end, 
+		statisticOutput=True, keptChildren=3, plot=plot, plotSpeed=plotDelay))
+	print('B&B:', G.branchAndBound(start, end, 
+		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
 	print('A*:', G.Astar(start, end, statisticOutput=True, plot=plot))
