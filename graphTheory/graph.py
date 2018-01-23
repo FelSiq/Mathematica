@@ -4,7 +4,8 @@ import math
 import sys
 
 class graph:
-	def __init__(self, filepath=None, separator=' ', directed=True, geometrical=True, dimension=0, label=None):
+	def __init__(self, filepath=None, separator=' ', directed=True, 
+		geometrical=True, dimension=0, label=None):
 		self.edgeList = {}
 		self.label = label
 		self.geometrical = geometrical
@@ -118,18 +119,32 @@ class graph:
 			output.pop('totalChildrens')
 		return output
 
-	def _blindSearch(self, start, end, depthFirst, prune=True, statisticOutput=False, lexicographical=True):
+	def _blindSearch(self, start, end, depthFirst, prune=True, 
+		statisticOutput=False, lexicographical=True, plot=False, plotSpeed=0.2, 
+		title = 'Generic Blind Search Algorithm'):
 		output = self._genOutput()
+
+		if plot:
+			self.plot(show=False)
+			plt.title(title)
+			plt.ion()
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
 
 		deque = [start]
-		curNode = ''
+		curNode = start
 		while len(deque):
+			if plot:
+				self._plotColorLocation(curNode, color='black')
+
 			output['iterations'] += statisticOutput
 			curNode = deque.pop()
 			visitedVec[curNode] = True
+
+			if plot:
+				self._plotCurrentPath(predVec, curNode)
+				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
 			if curNode != end:
 				adjList = list(self.edgeList[curNode]['adj'].keys())
@@ -149,6 +164,11 @@ class graph:
 
 		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
 
+		if plot:
+			if visitedVec[end]:
+				self._plotCurrentPath(predVec, end)
+			plt.pause(3.0)
+
 		return self._updateOutput(output, statisticOutput)
 
 	def _calcDist(self, a, b):
@@ -164,18 +184,33 @@ class graph:
 			curNode = predVec[curNode]
 		return found
 
-	def _informedSearch(self, start, end, depthFirst, prune=True, statisticOutput=False, keptChildrens=0):
+	def _informedSearch(self, start, end, depthFirst, prune=True, 
+		statisticOutput=False, keptChildrens=0, plot=False, plotSpeed=0.2, 
+		title='Generic Informed Search algorithm'):
 		output = self._genOutput()
+
+		if plot:
+			self.plot(show=False)
+			plt.title(title)
+			plt.ion()
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
 
 		deque = [(start, 0.0)]
-		curNode = ''
+		curNode = start
 		while len(deque):
+
+			if plot:
+				self._plotColorLocation(curNode, color='black')
+
 			output['iterations'] += statisticOutput
 			curNode = deque.pop()[0]
 			visitedVec[curNode] = True
+
+			if plot:
+				self._plotCurrentPath(predVec, curNode)
+				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
 			if curNode != end:
 				auxList = []
@@ -204,42 +239,85 @@ class graph:
 
 		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
 
+		if plot:
+			if visitedVec[end]:
+				self._plotCurrentPath(predVec, end)
+			plt.pause(3.0)
+
 		return self._updateOutput(output, statisticOutput)
 
-	def dfs(self, start, end, prune=True, lexicographical=True, statisticOutput=False):
-		return self._blindSearch(start, end, True, prune, statisticOutput, lexicographical)
+	def dfs(self, start, end, prune=True, lexicographical=True, 
+		statisticOutput=False, plot=False, plotSpeed=0.2):
+		return self._blindSearch(start, end, True, prune, 
+			statisticOutput, lexicographical, plot, plotSpeed, 'Depth First Search')
 
-	def bfs(self, start, end, prune=True, lexicographical=True, statisticOutput=False):
-		return self._blindSearch(start, end, False, prune, statisticOutput, lexicographical)
+	def bfs(self, start, end, prune=True, lexicographical=True, 
+		statisticOutput=False, plot=False, plotSpeed=0.2):
+		return self._blindSearch(start, end, False, prune, 
+			statisticOutput, lexicographical, plot, plotSpeed, 'Breadth First Search')
 
 	"""
 	Hill climbing is a DFS that proceed first into children node that is closest to the goal.
 	"""
-	def hillClimbing(self, start, end, prune=True, statisticOutput=False):
+	def hillClimbing(self, start, end, prune=True, 
+		statisticOutput=False, plot=False, plotSpeed=0.2):
 		if not self.geometrical:
 			print('error: hillClimbing works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
-		return self._informedSearch(start, end, True, prune, statisticOutput)
+		return self._informedSearch(start, end, True, prune, 
+			statisticOutput, 0, plot, plotSpeed, 'Hill Climbing algorithm')
 
 	"""
 	Beam Search is like BFS, but it does only keep w childrens that is closer to the goal per search tree level.
 	"""
-	def beamSearch(self, start, end, keptChildren=2, prune=True, statisticOutput=False):
+	def beamSearch(self, start, end, keptChildren=2, prune=True, 
+		statisticOutput=False, plot=False, plotSpeed=0.2):
 		if not self.geometrical:
 			print('error: beamSearch works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
-		return self._informedSearch(start, end, False, prune, statisticOutput, keptChildren)
+		return self._informedSearch(start, end, False, prune, 
+			statisticOutput, keptChildren, plot, plotSpeed, 'Beam Search algorithm')
+
+	def _plotColorLocation(self, curNode, color='Blue', time=0.0):
+		curPosition = self.edgeList[curNode]['coord']
+		plt.scatter(curPosition[0], curPosition[1], color=color)
+		if time > 0.0:
+			plt.pause(time)
+
+	def _plotCurrentPath(self, predVec, start):
+		curNode = start
+		curPosition = self.edgeList[curNode]['coord']
+
+		for k in self.edgeList.keys():
+			for a in self.edgeList[k]['adj']:
+				kCoord = self.edgeList[k]['coord']
+				aCoord = self.edgeList[a]['coord']
+				plt.plot([kCoord[0], aCoord[0]], [kCoord[1], aCoord[1]], color='black')
+
+		while curNode != '':
+			prevPosition = curPosition
+			curNode = predVec[curNode]
+			if curNode != '':
+				curPosition = self.edgeList[curNode]['coord']
+				plt.plot([prevPosition[0], curPosition[0]], [prevPosition[1], curPosition[1]], color='Red')
+
 
 	"""
 	This is Branch And Bound algorithm. To be fair, it's exactly the same as Dijkstra's Algorithm.
 	"""
-	def branchAndBound(self, start, end, prune=False, admissibleHeuristic=False, statisticOutput=False):
+	def branchAndBound(self, start, end, prune=False, admissibleHeuristic=False, 
+		statisticOutput=False, plot=False, plotSpeed=0.2, title='\'Branch and Bound\' algorithm'):
 		if admissibleHeuristic and not self.geometrical:
 			print('error: a admissible heuristic works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
+		
+		if plot:
+			self.plot(show=False)
+			plt.title(title)
+			plt.ion()
 
 		output = self._genOutput()
 
@@ -248,14 +326,22 @@ class graph:
 
 		minHeap = [(start, 0.0, 0.0)]
 		minPathLen = math.inf
-		curNode = ''
+		curNode = start
 
 		while len(minHeap):
 			output['iterations'] += statisticOutput
+
+			if plot:
+				self._plotColorLocation(curNode, color='black')
+
 			curItem = minHeap.pop()
 			curNode = curItem[0]
-			accumulatedDist = curItem[1]
 
+			if plot:
+				self._plotCurrentPath(predVec, curNode)
+				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
+
+			accumulatedDist = curItem[1]
 			visitedVec[curNode] = True
 
 			if curNode != end:
@@ -281,6 +367,11 @@ class graph:
 
 		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
 
+		if plot:
+			if visitedVec[end]:
+				self._plotCurrentPath(predVec, end)
+			plt.pause(3.0)
+
 		return self._updateOutput(output, statisticOutput)
 
 	"""
@@ -289,15 +380,20 @@ class graph:
 	A admissible heuristic is a value that is always less or equal than the true value, i.e, it never overestimate
 	the total value/cost/distance/etc to the goal. For example, if you take a straight line between two points, 
 	desconsidering if there is any obstacle or other constraint between then, it is a admissible heuristic, because 
-	the straight line is the smallest distance between two points, no matter if this straight path is or ins't possible
+	the straight line is the smallest distance between two points, no matter if this straight path is or isn't possible
 	to be done.
 	"""
-	def Astar(self, start, end, statisticOutput=False):
-		return self.branchAndBound(start, end, prune=True, admissibleHeuristic=True, statisticOutput=statisticOutput)
+	def Astar(self, start, end, statisticOutput=False, plot=False, plotSpeed=0.2):
+		return self.branchAndBound(start, end, True, True, 
+			statisticOutput, plot, plotSpeed, 'A* algorithm')
 
-	def plot(self):
+	def plot(self, show=True, time=2.0):
 		x =[]
 		y =[]
+
+		if show:
+			plt.ion()
+
 		nodes = self.edgeList.keys()
 		for k in nodes:
 			node = self.edgeList[k]['coord']
@@ -309,25 +405,27 @@ class graph:
 				aCoord = self.edgeList[a]['coord']
 				plt.plot([kCoord[0], aCoord[0]], [kCoord[1], aCoord[1]], color='black')
 		plt.scatter(x=x, y=y)
-		plt.show()
+
+		if show:
+			plt.pause(min(0.0, time))
 
 if __name__ == '__main__':
 
-	if len(sys.argv) <= 3:
-		print('usage: <graph filepath> <start> <end>')
+	if len(sys.argv) <= 4:
+		print('usage: <graph filepath> <start> <end> <plot? 0/1>')
 		exit(1)
 
 	start = sys.argv[2]
 	end = sys.argv[3]
+	plot = bool(int(sys.argv[4]))
 
 	G = graph(sys.argv[1], geometrical = True, directed=False)
 	G.print()
-	G.plot()
 
 	print('\n')
-	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, statisticOutput=True))
-	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, statisticOutput=True))
-	print('HC:', G.hillClimbing(start, end, statisticOutput=True))
-	print('BS:', G.beamSearch(start, end, statisticOutput=True, keptChildren=2))
-	print('B&B:', G.branchAndBound(start, end, statisticOutput=True))
-	print('A*:', G.Astar(start, end, statisticOutput=True))
+	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, statisticOutput=True, plot=plot))
+	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, statisticOutput=True, plot=plot))
+	print('HC:', G.hillClimbing(start, end, statisticOutput=True, plot=plot))
+	print('BS:', G.beamSearch(start, end, statisticOutput=True, keptChildren=2, plot=plot))
+	print('B&B:', G.branchAndBound(start, end, statisticOutput=True, plot=plot))
+	print('A*:', G.Astar(start, end, statisticOutput=True, plot=plot))
