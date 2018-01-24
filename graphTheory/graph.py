@@ -94,16 +94,17 @@ class graph:
 
 
 	def _searchPlotSetup(self, title, start, end):
-		self.plot(show=False)
-		plt.gcf().gca().add_artist(plt.Circle(tuple(self.edgeList[end]['coord']), 10, color='blue', fill=False))
-		plt.gcf().gca().add_artist(plt.Circle(tuple(self.edgeList[start]['coord']), 10, color='green', fill=False))
+		xSize, ySize = self.plot(show=False, returnDimensions = True)
+		circleRadius = min(xSize, ySize) * 0.1
+		plt.gcf().gca().add_artist(plt.Circle(tuple(self.edgeList[end]['coord']), circleRadius, color='blue', fill=False))
+		plt.gcf().gca().add_artist(plt.Circle(tuple(self.edgeList[start]['coord']), circleRadius, color='green', fill=False))
 		plt.title(title)
 		plt.ion()
 
 
 	def _genOutput(self):
-		return {'distance': 0.0, 'path': [], 
-			'iterations' : 0, 'totalChildrens' : 0}
+		return {'distance': 0.0, 'path': [], 'iterations' : 0, 
+		'totalChildrens' : 0, 'visitOrder' : []}
 
 	def _buildPathAndDistance(self, predVec, start, end):
 		totalDistance = 0.0
@@ -134,7 +135,7 @@ class graph:
 		output = self._genOutput()
 
 		if plot:
-			self._searchPlotSetup(title, start, end)
+			self._searchPlotSetup(title + ' (prunned)' if prune else '', start, end)
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
@@ -145,15 +146,17 @@ class graph:
 			if plot:
 				self._plotColorLocation(curNode, color='black')
 
-			output['iterations'] += statisticOutput
 			curNode = deque.pop()
 			visitedVec[curNode] = True
+			output['iterations'] += statisticOutput
+			output['visitOrder'].append(curNode)
 
 			if plot:
 				self._plotCurrentPath(predVec, curNode)
 				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
-			if curNode != end:
+			done = False
+			if curNode != end and not done:
 				adjList = list(self.edgeList[curNode]['adj'].keys())
 				if lexicographical:
 					adjList.sort(reverse=depthFirst)
@@ -165,7 +168,9 @@ class graph:
 						if depthFirst:
 							deque.append(a)
 						else:
-							deque.insert(0, a) 
+							deque.insert(0, a)
+						if a == end:
+							done = True
 			else:
 				deque.clear()
 
@@ -197,7 +202,7 @@ class graph:
 		output = self._genOutput()
 
 		if plot:
-			self._searchPlotSetup(title, start, end)
+			self._searchPlotSetup(title + ' (prunned)' if prune else '', start, end)
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
@@ -209,9 +214,10 @@ class graph:
 			if plot:
 				self._plotColorLocation(curNode, color='black')
 
-			output['iterations'] += statisticOutput
 			curNode = deque.pop()[0]
 			visitedVec[curNode] = True
+			output['iterations'] += statisticOutput
+			output['visitOrder'].append(curNode)
 
 			if plot:
 				self._plotCurrentPath(predVec, curNode)
@@ -227,7 +233,7 @@ class graph:
 						predVec[a] = curNode
 						newChildren = (a, self._calcDist(a, end))
 						auxList.append(newChildren)
-				
+
 				# Sort based on which children node is heuristically closer to the objective,
 				# then use lexicographical order in case of draw.
 
@@ -323,7 +329,7 @@ class graph:
 			return None
 		
 		if plot:
-			self._searchPlotSetup(title, start, end)
+			self._searchPlotSetup(title + ' (prunned)' if prune else '', start, end)
 
 		output = self._genOutput()
 
@@ -335,13 +341,14 @@ class graph:
 		curNode = start
 
 		while len(minHeap):
-			output['iterations'] += statisticOutput
 
 			if plot:
 				self._plotColorLocation(curNode, color='black')
 
 			curItem = minHeap.pop()
 			curNode = curItem[0]
+			output['iterations'] += statisticOutput
+			output['visitOrder'].append(curNode)
 
 			if plot:
 				self._plotCurrentPath(predVec, curNode)
@@ -395,7 +402,7 @@ class graph:
 		return self.branchAndBound(start, end, True, True, 
 			statisticOutput, plot, plotSpeed, 'A* algorithm')
 
-	def plot(self, show=True, time=2.0):
+	def plot(self, show=True, time=2.0, returnDimensions=False):
 		x =[]
 		y =[]
 
@@ -417,6 +424,19 @@ class graph:
 		if show:
 			plt.pause(min(0.0, time))
 
+		if returnDimensions:
+			xLims = plt.gca().get_xlim()
+			yLims = plt.gca().get_ylim() 
+			return xLims[1] - xLims[0], yLims[1] - yLims[0] 
+
+def printSearchOutput(algorithm, outputDic):
+	keys = sorted(outputDic.keys())
+	print('\u256D', algorithm)
+	for k in range(len(keys)):
+		curKey = keys[k]
+		print(('\u2514' if k == len(keys) - 1 else '\u251C') 
+			+ '\u2500\u2500\u2500\u2500\u257C', curKey, ':', outputDic[curKey])
+
 if __name__ == '__main__':
 
 	if len(sys.argv) <= 4:
@@ -434,15 +454,20 @@ if __name__ == '__main__':
 	G = graph(sys.argv[1], geometrical = True, directed=False)
 	G.print()
 
+	if not (start in G.edgeList and end in G.edgeList):
+		print('E: invalid start/end indexes for search.') 
+		exit(2)
+
 	print('\n')
-	print('DFS:', G.dfs(start, end, prune=False, lexicographical=True, 
+
+	printSearchOutput('DFS', G.dfs(start, end, prune=True, lexicographical=True, 
 		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	print('BFS:', G.bfs(start, end, prune=False, lexicographical=True, 
+	printSearchOutput('BFS', G.bfs(start, end, prune=True, lexicographical=True, 
 		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	print('HC:', G.hillClimbing(start, end, 
+	printSearchOutput('HC', G.hillClimbing(start, end, 
 		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	print('BS:', G.beamSearch(start, end, 
+	printSearchOutput('BS', G.beamSearch(start, end, 
 		statisticOutput=True, keptChildren=3, plot=plot, plotSpeed=plotDelay))
-	print('B&B:', G.branchAndBound(start, end, 
-		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	print('A*:', G.Astar(start, end, statisticOutput=True, plot=plot))
+	printSearchOutput('B&B', G.branchAndBound(start, end, 
+		statisticOutput=True, plot=plot, plotSpeed=plotDelay, prune=True))
+	printSearchOutput('A*', G.Astar(start, end, statisticOutput=True, plot=plot))
