@@ -106,14 +106,16 @@ class graph:
 		return {'distance': 0.0, 'path': [], 'iterations' : 0, 
 		'totalChildrens' : 0, 'visitOrder' : []}
 
-	def _buildPathAndDistance(self, predVec, start, end):
+	def _buildPathAndDistance(self, predVec=None, start='', end='', curPath=''):
 		totalDistance = 0.0
 		curNode = end
 		path = []
 
+		i = len(curPath)
 		while curNode != start and curNode != '':
 			path.insert(0, curNode)
-			prevNode = predVec[curNode]
+			i -= 1
+			prevNode = predVec[curNode] if predVec else (curPath[i] if i >= 0 else '')
 			if prevNode != '':
 				totalDistance += self.edgeList[prevNode]['adj'][curNode]
 			curNode = prevNode
@@ -135,24 +137,30 @@ class graph:
 		output = self._genOutput()
 
 		if plot:
-			self._searchPlotSetup(title + ' (prunned)' if prune else '', start, end)
+			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
 
-		deque = [start]
+		deque = [(start, start)]
 		curNode = start
 		while len(deque):
 			if plot:
 				self._plotColorLocation(curNode, color='black')
 
-			curNode = deque.pop()
+			curItem = deque.pop()
+			curNode = curItem[0]
+			curPath = curItem[1]
+
 			visitedVec[curNode] = True
 			output['iterations'] += statisticOutput
 			output['visitOrder'].append(curNode)
 
 			if plot:
-				self._plotCurrentPath(predVec, curNode)
+				if prune:
+					self._plotCurrentPath(start=curNode, predVec=predVec)
+				else:
+					self._plotCurrentPath(curPath=curPath)
 				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
 			done = False
@@ -162,23 +170,33 @@ class graph:
 					adjList.sort(reverse=depthFirst)
 
 				for a in adjList:
-					if (prune and not visitedVec[a]) or not (prune or self._checkPreds(predVec, curNode, a)):
+					if (prune and not visitedVec[a]) or (not prune and curPath.find(a) == -1):
 						output['totalChildrens'] += statisticOutput
+						
+						newItem = (a, curPath + a)
 						predVec[a] = curNode
+
 						if depthFirst:
-							deque.append(a)
+							deque.append(newItem)
 						else:
-							deque.insert(0, a)
+							deque.insert(0, newItem)
 						if a == end:
 							done = True
 			else:
 				deque.clear()
 
-		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
+		if prune:
+			output['path'], output['distance'] = self._buildPathAndDistance(predVec=predVec, start=start, end=end)
+		else:
+			output['path'], output['distance'] = self._buildPathAndDistance(curPath=curPath)
 
 		if plot:
 			if visitedVec[end]:
-				self._plotCurrentPath(predVec, end)
+				if prune:
+					self._plotCurrentPath(start=end, predVec=predVec)
+				else:
+					self._plotCurrentPath(curPath=curPath)
+
 			plt.pause(3.0)
 
 		return self._updateOutput(output, statisticOutput)
@@ -202,7 +220,7 @@ class graph:
 		output = self._genOutput()
 
 		if plot:
-			self._searchPlotSetup(title + ' (prunned)' if prune else '', start, end)
+			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
 
 		predVec = {key : '' for key in self.edgeList}
 		visitedVec = {key : False for key in self.edgeList}
@@ -220,7 +238,7 @@ class graph:
 			output['visitOrder'].append(curNode)
 
 			if plot:
-				self._plotCurrentPath(predVec, curNode)
+				self._plotCurrentPath(start=curNode, predVec=predVec)
 				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
 			if curNode != end:
@@ -254,7 +272,7 @@ class graph:
 
 		if plot:
 			if visitedVec[end]:
-				self._plotCurrentPath(predVec, end)
+				self._plotCurrentPath(start=end, predVec=predVec)
 			plt.pause(3.0)
 
 		return self._updateOutput(output, statisticOutput)
@@ -299,24 +317,29 @@ class graph:
 		if time > 0.0:
 			plt.pause(time)
 
-	def _plotCurrentPath(self, predVec, start):
-		curNode = start
-		curPosition = self.edgeList[curNode]['coord']
-
+	def _plotCurrentPath(self, start='', predVec=None, curPath=''):
 		while len(self.plotPathList):
 			path = self.plotPathList.pop()
 			plt.plot(path[0], path[1], color='black')
 
-		while curNode != '':
+		if predVec:
+			curNode = start
+			curPosition = self.edgeList[curNode]['coord']
+		else:
+			curNode = curPath[0]
+			curPosition = self.edgeList[curPath[0]]['coord']
+
+		i = 1
+		while (predVec and curNode != '') or (i < len(curPath)):
 			prevPosition = curPosition
-			curNode = predVec[curNode]
+			curNode = predVec[curNode] if predVec else curPath[i]
+			i += 1
 			if curNode != '':
 				curPosition = self.edgeList[curNode]['coord']
 				plotXs = [prevPosition[0], curPosition[0]]
 				plotYs = [prevPosition[1], curPosition[1]]
 				self.plotPathList.append((plotXs, plotYs))
 				plt.plot(plotXs, plotYs, color='red')
-
 
 	"""
 	This is Branch And Bound algorithm. To be fair, it's exactly the same as Dijkstra's Algorithm.
@@ -329,7 +352,7 @@ class graph:
 			return None
 		
 		if plot:
-			self._searchPlotSetup(title + ' (prunned)' if prune else '', start, end)
+			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
 
 		output = self._genOutput()
 
@@ -351,7 +374,7 @@ class graph:
 			output['visitOrder'].append(curNode)
 
 			if plot:
-				self._plotCurrentPath(predVec, curNode)
+				self._plotCurrentPath(start=curNode, predVec=predVec)
 				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
 			accumulatedDist = curItem[1]
@@ -384,7 +407,7 @@ class graph:
 
 		if plot:
 			if visitedVec[end]:
-				self._plotCurrentPath(predVec, end)
+				self._plotCurrentPath(start=end, predVec=predVec)
 			plt.pause(3.0)
 
 		return self._updateOutput(output, statisticOutput)
@@ -460,9 +483,9 @@ if __name__ == '__main__':
 
 	print('\n')
 
-	printSearchOutput('DFS', G.dfs(start, end, prune=True, lexicographical=True, 
+	printSearchOutput('BFS', G.bfs(start, end, prune=False, lexicographical=True, 
 		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	printSearchOutput('BFS', G.bfs(start, end, prune=True, lexicographical=True, 
+	printSearchOutput('DFS', G.dfs(start, end, prune=False, lexicographical=True, 
 		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
 	printSearchOutput('HC', G.hillClimbing(start, end, 
 		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
