@@ -4,6 +4,13 @@ import math
 import sys
 
 class graph:
+	def _addNode(self, label, coord=None, adj=None, hcost={'enabled': False, 'cost': 0.0}):
+		if not label in self.edgeList:
+			self.edgeList[label] = {
+				'coord': coord if coord else [0.0] * self.dimension,
+				'adj': adj if adj else {},
+				'hcost': hcost}
+
 	def __init__(self, filepath=None, separator=' ', directed=True, 
 		geometrical=True, dimension=0, label=None):
 		self.edgeList = {}
@@ -21,16 +28,10 @@ class graph:
 				if tokens[0] == 'edge':
 					nodeA = tokens[1]
 					nodeB = tokens[2]
-					if not nodeA in self.edgeList:
-						self.edgeList[nodeA] = {
-							'coord': [0.0] * self.dimension, 
-							'adj': {}}
-					if not nodeB in self.edgeList:
-						self.edgeList[nodeB] = {
-							'coord': [0.0] * self.dimension,
-							'adj': {}}
+					self._addNode(nodeA)
+					self._addNode(nodeB)
 
-					if geometrical:
+					if geometrical and len(tokens) < 4:
 						weight = self._calcDist(nodeA, nodeB)
 					else:
 						weight = float(tokens[3])
@@ -58,12 +59,14 @@ class graph:
 					else:
 						nodeCoord = []
 
-					if not nodeLabel in self.edgeList:
-						self.edgeList[nodeLabel] = {
-							'coord': nodeCoord, 
-							'adj': {}}
-					else:
-						self.edgeList[nodeLabel]['coord'] = nodeCoord
+					self._addNode(nodeLabel)
+					self.edgeList[nodeLabel]['coord'] = nodeCoord
+
+				elif tokens[0] == 'hcost':
+					curNode = tokens[1]
+					self._addNode(curNode)
+					self.edgeList[curNode]['hcost'] = {'enabled': True, 'cost': float(tokens[2])}
+
 				else:
 					print('e: unknown token \'' + tokens[0] + '\'. Ignoring it.')
 
@@ -92,7 +95,6 @@ class graph:
 					'Projection on dim(' + str(self.dimension)+ ') will be used.')
 			self.edgeList[c]['coord'] = coordinates[c][:self.dimension]
 
-
 	def _searchPlotSetup(self, title, start, end):
 		xSize, ySize = self.plot(show=False, returnDimensions = True)
 		circleRadius = min(xSize, ySize) * 0.1
@@ -106,24 +108,17 @@ class graph:
 		return {'distance': 0.0, 'path': [], 'iterations' : 0, 
 		'totalChildrens' : 0, 'visitOrder' : []}
 
-	def _buildPathAndDistance(self, predVec=None, start='', end='', curPath=''):
+	def _calculateTotalDist(self, curPath='', goal=''):
 		totalDistance = 0.0
-		curNode = end
-		path = []
+		if curPath != '':
+			prevNode = curPath[0]
+			for p in curPath[1:]:
+				totalDistance += self.edgeList[prevNode]['adj'][p]
+				prevNode = p
 
-		i = len(curPath)
-		while curNode != start and curNode != '':
-			path.insert(0, curNode)
-			i -= 1
-			prevNode = predVec[curNode] if predVec else (curPath[i] if i >= 0 else '')
-			if prevNode != '':
-				totalDistance += self.edgeList[prevNode]['adj'][curNode]
-			curNode = prevNode
-
-		if curNode == start:
-			path.insert(0, start)
-			return path, totalDistance
-		return [], math.inf
+		if prevNode == goal:
+			return curPath, totalDistance
+		return '', math.inf
 
 	def _updateOutput(self, output, statisticOutput):
 		if not statisticOutput:
@@ -131,151 +126,10 @@ class graph:
 			output.pop('totalChildrens')
 		return output
 
-	def _blindSearch(self, start, end, depthFirst, prune=True, 
-		statisticOutput=False, lexicographical=True, plot=False, plotSpeed=0.2, 
-		title = 'Generic Blind Search Algorithm'):
-		output = self._genOutput()
-
-		if plot:
-			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
-
-		predVec = {key : '' for key in self.edgeList}
-		visitedVec = {key : False for key in self.edgeList}
-
-		deque = [(start, start)]
-		curNode = start
-		while len(deque):
-			if plot:
-				self._plotColorLocation(curNode, color='black')
-
-			curItem = deque.pop()
-			curNode = curItem[0]
-			curPath = curItem[1]
-
-			visitedVec[curNode] = True
-			output['iterations'] += statisticOutput
-			output['visitOrder'].append(curNode)
-
-			if plot:
-				if prune:
-					self._plotCurrentPath(start=curNode, predVec=predVec)
-				else:
-					self._plotCurrentPath(curPath=curPath)
-				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
-
-			done = False
-			if curNode != end and not done:
-				adjList = list(self.edgeList[curNode]['adj'].keys())
-				if lexicographical:
-					adjList.sort(reverse=depthFirst)
-
-				for a in adjList:
-					if (prune and not visitedVec[a]) or (not prune and curPath.find(a) == -1):
-						output['totalChildrens'] += statisticOutput
-						
-						newItem = (a, curPath + a)
-						predVec[a] = curNode
-
-						if depthFirst:
-							deque.append(newItem)
-						else:
-							deque.insert(0, newItem)
-						if a == end:
-							done = True
-			else:
-				deque.clear()
-
-		if prune:
-			output['path'], output['distance'] = self._buildPathAndDistance(predVec=predVec, start=start, end=end)
-		else:
-			output['path'], output['distance'] = self._buildPathAndDistance(curPath=curPath)
-
-		if plot:
-			if visitedVec[end]:
-				if prune:
-					self._plotCurrentPath(start=end, predVec=predVec)
-				else:
-					self._plotCurrentPath(curPath=curPath)
-
-			plt.pause(3.0)
-
-		return self._updateOutput(output, statisticOutput)
-
 	def _calcDist(self, a, b):
 		aCoord = self.edgeList[a]['coord']
 		bCoord = self.edgeList[b]['coord']
 		return sum([(aCoord[i] - bCoord[i])**2.0 for i in range(min(len(aCoord), len(bCoord)))])**0.5
-
-	def _checkPreds(self, predVec, start, query):
-		found = False
-		curNode = start
-		while not found and curNode != '':
-			found = curNode == query
-			curNode = predVec[curNode]
-		return found
-
-	def _informedSearch(self, start, end, depthFirst, prune=True, 
-		statisticOutput=False, keptChildrens=0, plot=False, plotSpeed=0.2, 
-		title='Generic Informed Search algorithm'):
-		output = self._genOutput()
-
-		if plot:
-			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
-
-		predVec = {key : '' for key in self.edgeList}
-		visitedVec = {key : False for key in self.edgeList}
-
-		deque = [(start, 0.0)]
-		curNode = start
-		while len(deque):
-
-			if plot:
-				self._plotColorLocation(curNode, color='black')
-
-			curNode = deque.pop()[0]
-			visitedVec[curNode] = True
-			output['iterations'] += statisticOutput
-			output['visitOrder'].append(curNode)
-
-			if plot:
-				self._plotCurrentPath(start=curNode, predVec=predVec)
-				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
-
-			if curNode != end:
-				auxList = []
-				adjList = list(self.edgeList[curNode]['adj'].keys())
-
-				for a in adjList:
-					if (prune and not visitedVec[a]) or not (prune or self._checkPreds(predVec, curNode, a)):
-						output['totalChildrens'] += statisticOutput
-						predVec[a] = curNode
-						newChildren = (a, self._calcDist(a, end))
-						auxList.append(newChildren)
-
-				# Sort based on which children node is heuristically closer to the objective,
-				# then use lexicographical order in case of draw.
-
-				if depthFirst:
-					auxList.sort(key=operator.itemgetter(1, 0), reverse=True)
-					deque = deque + auxList
-				else:
-					deque = auxList + deque
-					deque.sort(key=operator.itemgetter(1), reverse = True)
-					size = len(deque)
-					if size > keptChildrens:
-						deque[size - keptChildrens:size]
-
-			else:
-				deque.clear()
-
-		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
-
-		if plot:
-			if visitedVec[end]:
-				self._plotCurrentPath(start=end, predVec=predVec)
-			plt.pause(3.0)
-
-		return self._updateOutput(output, statisticOutput)
 
 	def dfs(self, start, end, prune=True, lexicographical=True, 
 		statisticOutput=False, plot=False, plotSpeed=0.2):
@@ -342,77 +196,6 @@ class graph:
 				plt.plot(plotXs, plotYs, color='red')
 
 	"""
-	This is Branch And Bound algorithm. To be fair, it's exactly the same as Dijkstra's Algorithm.
-	"""
-	def branchAndBound(self, start, end, prune=False, admissibleHeuristic=False, 
-		statisticOutput=False, plot=False, plotSpeed=0.2, title='\'Branch and Bound\' algorithm'):
-		if admissibleHeuristic and not self.geometrical:
-			print('error: a admissible heuristic works only with',
-				'coordinate systems (graph is in space with null dimension).')
-			return None
-		
-		if plot:
-			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
-
-		output = self._genOutput()
-
-		predVec = {key : '' for key in self.edgeList}
-		visitedVec = {key : False for key in self.edgeList}
-
-		minHeap = [(start, 0.0, 0.0)]
-		minPathLen = math.inf
-		curNode = start
-
-		while len(minHeap):
-
-			if plot:
-				self._plotColorLocation(curNode, color='black')
-
-			curItem = minHeap.pop()
-			curNode = curItem[0]
-			output['iterations'] += statisticOutput
-			output['visitOrder'].append(curNode)
-
-			if plot:
-				self._plotCurrentPath(start=curNode, predVec=predVec)
-				self._plotColorLocation(curNode, color='Red', time=plotSpeed)
-
-			accumulatedDist = curItem[1]
-			visitedVec[curNode] = True
-
-			if accumulatedDist < minPathLen:
-				if curNode != end:
-					adjList = list(self.edgeList[curNode]['adj'].keys())
-
-					for a in adjList:
-						if (prune and not visitedVec[a]) or not (prune or self._checkPreds(predVec, curNode, a)):
-							totalDist = accumulatedDist + self.edgeList[curNode]['adj'][a]
-							if totalDist < minPathLen:
-								output['totalChildrens'] += statisticOutput
-								predVec[a] = curNode
-								newChildren = (a, totalDist, self._calcDist(a, end))
-								minHeap.append(newChildren)
-								if a == end:
-									minPathLen = totalDist
-						
-					# Sort based on which children node is heuristically closer to the objective
-					if admissibleHeuristic:
-						minHeap.sort(key=lambda item : item[1] + item[2], reverse=True)
-					else:
-						minHeap.sort(key=lambda item : item[1], reverse=True)
-				else:
-					minPathLen = min(minPathLen, accumulatedDist)
-
-		output['path'], output['distance'] = self._buildPathAndDistance(predVec, start, end)
-
-		if plot:
-			if visitedVec[end]:
-				self._plotCurrentPath(start=end, predVec=predVec)
-			plt.pause(3.0)
-
-		return self._updateOutput(output, statisticOutput)
-
-	"""
 	A* is just Branch and Bound (or Dijkstra's algorhtm) without revisiting nodes and with a admissible heuristic.
 
 	A admissible heuristic is a value that is always less or equal than the true value, i.e, it never overestimate
@@ -426,6 +209,10 @@ class graph:
 			statisticOutput, plot, plotSpeed, 'A* algorithm')
 
 	def plot(self, show=True, time=2.0, returnDimensions=False):
+		if not self.geometrical:
+			print('E: can\'t plot a non-geometrical graph.')
+			return None
+
 		x =[]
 		y =[]
 
@@ -450,7 +237,219 @@ class graph:
 		if returnDimensions:
 			xLims = plt.gca().get_xlim()
 			yLims = plt.gca().get_ylim() 
-			return xLims[1] - xLims[0], yLims[1] - yLims[0] 
+			return xLims[1] - xLims[0], yLims[1] - yLims[0]
+
+	def _blindSearch(self, start, end, depthFirst, prune=True, 
+		statisticOutput=False, lexicographical=True, plot=False, plotSpeed=0.2, 
+		title = 'Generic Blind Search Algorithm'):
+		output = self._genOutput()
+
+		if plot:
+			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
+
+		predVec = {key : '' for key in self.edgeList}
+		visitedVec = {key : False for key in self.edgeList}
+
+		deque = [(start, start)]
+		curNode = start
+		prevNode = start
+		while len(deque):
+			curItem = deque.pop()
+			aux = curItem[0]
+
+			if not prune or not visitedVec[aux]:
+				if plot:
+					self._plotColorLocation(prevNode, color='black')
+				prevNode = curNode
+				curNode = curItem[0]
+				curPath = curItem[1]
+
+				visitedVec[curNode] = True
+				output['iterations'] += statisticOutput
+				output['visitOrder'].append(curNode)
+
+				if plot:
+					self._plotCurrentPath(curPath=curPath)
+					self._plotColorLocation(curNode, color='Red', time=plotSpeed)
+
+				done = False
+				if curNode != end and not done:
+					adjList = list(self.edgeList[curNode]['adj'].keys())
+					if lexicographical:
+						adjList.sort(reverse=depthFirst)
+
+					for a in adjList:
+						if curPath.find(a) == -1:
+							output['totalChildrens'] += statisticOutput
+							
+							newItem = (a, curPath + a)
+							predVec[a] = curNode
+
+							if depthFirst:
+								deque.append(newItem)
+							else:
+								deque.insert(0, newItem)
+							if a == end:
+								done = True
+				else:
+					deque.clear()
+
+		output['path'], output['distance'] = self._calculateTotalDist(curPath=curPath, goal=end)
+
+		if plot:
+			self._plotCurrentPath(curPath=curPath)
+			plt.pause(3.0)
+
+		return self._updateOutput(output, statisticOutput)
+
+	def _informedSearch(self, start, end, depthFirst, prune=True, 
+		statisticOutput=False, keptChildrens=1, plot=False, plotSpeed=0.2, 
+		title='Generic Informed Search algorithm'):
+		output = self._genOutput()
+
+		if plot:
+			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
+
+		visitedVec = {key : False for key in self.edgeList}
+
+		deque = [(start, 0.0, 0.0, start)]
+		curNode = start
+		curPath = start
+		prevNode = start
+		while len(deque):
+			curItem = deque.pop()
+			aux = curItem[0]
+			if not prune or not visitedVec[aux]:
+				if plot:
+					self._plotColorLocation(prevNode, color='black')
+
+				prevNode = curNode
+				curNode = curItem[0]
+				curCost = curItem[1]
+				curPath = curItem[3]
+				visitedVec[curNode] = True
+				output['iterations'] += statisticOutput
+				output['visitOrder'].append(curNode)
+
+				if plot:
+					self._plotCurrentPath(curPath=curPath)
+					self._plotColorLocation(curNode, color='Red', time=plotSpeed)
+
+				if curNode != end:
+					auxList = []
+					adjList = list(self.edgeList[curNode]['adj'].keys())
+
+					for a in adjList:
+						if curPath.find(a) == -1:
+							output['totalChildrens'] += statisticOutput
+							if self.edgeList[a]['hcost']['enabled']:
+								heuristicCost = self.edgeList[a]['hcost']['cost']
+							else:
+								heuristicCost = self._calcDist(a, end)
+							newChildren = (a, curCost + self.edgeList[curNode]['adj'][a], heuristicCost, curPath + a)
+							auxList.append(newChildren)
+
+					# Sort based on which children node is heuristically closer to the objective,
+					# then use lexicographical order in case of draw.
+
+					deque.clear()
+					auxList.sort(key=lambda item : item[1] + item[2], reverse=True)
+
+					print(auxList)
+					size = len(auxList)
+					if size > keptChildrens:
+						auxList = auxList[size - keptChildrens:size]
+					deque = sorted(auxList, key=operator.itemgetter(0))
+					print(deque)
+
+				else:
+					deque.clear()
+
+		output['path'], output['distance'] = self._calculateTotalDist(curPath=curPath, goal=end)
+
+		if plot:
+			self._plotCurrentPath(curPath=curPath)
+			plt.pause(3.0)
+
+		return self._updateOutput(output, statisticOutput)
+
+	"""
+	This is Branch And Bound algorithm. To be fair, it's exactly the same as Dijkstra's Algorithm.
+	"""
+	def branchAndBound(self, start, end, prune=False, admissibleHeuristic=False, 
+		statisticOutput=False, plot=False, plotSpeed=0.2, title='Branch and Bound algorithm', lexicographical=True):
+		if admissibleHeuristic and not self.geometrical:
+			print('error: a admissible heuristic works only with',
+				'coordinate systems (graph is in space with null dimension).')
+			return None
+		
+		if plot:
+			self._searchPlotSetup(title + (' (prunned)' if prune else ''), start, end)
+
+		output = self._genOutput()
+
+		visitedVec = {key : False for key in self.edgeList}
+
+		minHeap = [(start, 0.0, 0.0, start)]
+		minPathLen = math.inf
+		curNode = start
+		prevNode = start
+		curPath = start
+		winnerPath = start
+
+		while len(minHeap):
+			curItem = minHeap.pop()
+			aux = curItem[0]
+
+			if not prune or not visitedVec[aux]:
+				if plot:
+					self._plotColorLocation(prevNode, color='black')
+
+				prevNode = curNode
+				curNode = curItem[0]
+				curPath = curItem[3]
+				output['iterations'] += statisticOutput
+				output['visitOrder'].append(curNode)
+
+				if plot:
+					self._plotCurrentPath(curPath=curPath)
+					self._plotColorLocation(curNode, color='Red', time=plotSpeed)
+
+				accumulatedDist = curItem[1]
+				visitedVec[curNode] = True
+
+				if accumulatedDist < minPathLen:
+					if curNode != end:
+						adjList = list(self.edgeList[curNode]['adj'].keys())
+
+						for a in adjList:
+							if curPath.find(a) == -1:
+								totalDist = accumulatedDist + self.edgeList[curNode]['adj'][a]
+								if totalDist < minPathLen:
+									output['totalChildrens'] += statisticOutput
+									newChildren = (a, totalDist, self._calcDist(a, end), curPath + a)
+									minHeap.append(newChildren)
+									if a == end:
+										winnerPath = curPath + a
+										minPathLen = totalDist
+							
+						# Sort based on which children node is heuristically closer to the objective
+						if admissibleHeuristic:
+							minHeap.sort(key=lambda item : item[1] + item[2], reverse=True)
+						else:
+							minHeap.sort(key=lambda item : item[1], reverse=True)
+					else:
+						winnerPath = curPath
+						minPathLen = accumulatedDist
+
+		output['path'], output['distance'] = self._calculateTotalDist(curPath=winnerPath, goal=end)
+
+		if plot:
+			self._plotCurrentPath(curPath=winnerPath)
+			plt.pause(3.0)
+
+		return self._updateOutput(output, statisticOutput)
+
 
 def printSearchOutput(algorithm, outputDic):
 	keys = sorted(outputDic.keys())
@@ -483,14 +482,22 @@ if __name__ == '__main__':
 
 	print('\n')
 
-	printSearchOutput('BFS', G.bfs(start, end, prune=False, lexicographical=True, 
-		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	printSearchOutput('DFS', G.dfs(start, end, prune=False, lexicographical=True, 
-		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	printSearchOutput('HC', G.hillClimbing(start, end, 
-		statisticOutput=True, plot=plot, plotSpeed=plotDelay))
-	printSearchOutput('BS', G.beamSearch(start, end, 
-		statisticOutput=True, keptChildren=3, plot=plot, plotSpeed=plotDelay))
-	printSearchOutput('B&B', G.branchAndBound(start, end, 
-		statisticOutput=True, plot=plot, plotSpeed=plotDelay, prune=True))
-	printSearchOutput('A*', G.Astar(start, end, statisticOutput=True, plot=plot))
+	searches = {'BFS':False, 'DFS':False, 'HC':False, 'BS':True, 'BB':False, 'AStar':False}
+
+	if searches['BFS']:
+		printSearchOutput('BFS', G.bfs(start, end, prune=False, lexicographical=True, 
+			statisticOutput=True, plot=plot, plotSpeed=plotDelay))
+	if searches['DFS']:
+		printSearchOutput('DFS', G.dfs(start, end, prune=True, lexicographical=True, 
+			statisticOutput=True, plot=plot, plotSpeed=plotDelay))
+	if searches['HC']:
+		printSearchOutput('HC', G.hillClimbing(start, end, 
+			statisticOutput=True, plot=plot, plotSpeed=plotDelay))
+	if searches['BS']:
+		printSearchOutput('BS', G.beamSearch(start, end, 
+			statisticOutput=True, keptChildren=2, plot=plot, plotSpeed=plotDelay))
+	if searches['BB']:
+		printSearchOutput('B&B', G.branchAndBound(start, end, 
+			statisticOutput=True, plot=plot, plotSpeed=plotDelay, prune=True))
+	if searches['AStar']:
+		printSearchOutput('A*', G.Astar(start, end, statisticOutput=True, plot=plot))
