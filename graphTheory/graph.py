@@ -142,7 +142,8 @@ class graph:
 			statisticOutput, lexicographical, plot, plotSpeed, 'Breadth First Search')
 
 	"""
-	Hill climbing is a DFS that proceed first into children node that is closest to the goal.
+	Hill climbing is a DFS that proceed only into children node that is closest to the goal.
+	It's a Beam Search with keptChildren = 1.
 	"""
 	def hillClimbing(self, start, end, prune=True, 
 		statisticOutput=False, plot=False, plotSpeed=0.2):
@@ -150,11 +151,12 @@ class graph:
 			print('error: hillClimbing works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
-		return self._informedSearch(start, end, True, prune, 
-			statisticOutput, 0, plot, plotSpeed, 'Hill Climbing algorithm')
+		return self._informedSearch(start, end, prune, 
+			statisticOutput, 1, plot, plotSpeed, 'Hill Climbing algorithm')
 
 	"""
-	Beam Search is like BFS, but it does only keep w childrens that is closer to the goal per search tree level.
+	Beam Search is like BFS, but it does only keep w childrens that is 
+	closer to the goal per search tree level.
 	"""
 	def beamSearch(self, start, end, keptChildren=3, prune=True, 
 		statisticOutput=False, plot=False, plotSpeed=0.2):
@@ -162,7 +164,7 @@ class graph:
 			print('error: beamSearch works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
-		return self._informedSearch(start, end, False, prune, 
+		return self._informedSearch(start, end, prune, 
 			statisticOutput, keptChildren, plot, plotSpeed, 'Beam Search algorithm')
 
 	def _plotColorLocation(self, curNode, color='Blue', time=0.0):
@@ -302,7 +304,7 @@ class graph:
 
 		return self._updateOutput(output, statisticOutput)
 
-	def _informedSearch(self, start, end, depthFirst, prune=True, 
+	def _informedSearch(self, start, end, prune=True, 
 		statisticOutput=False, keptChildrens=1, plot=False, plotSpeed=0.2, 
 		title='Generic Informed Search algorithm'):
 		output = self._genOutput()
@@ -312,12 +314,25 @@ class graph:
 
 		visitedVec = {key : False for key in self.edgeList}
 
-		deque = [(start, 0.0, 0.0, start)]
+		curLevelNodes = [(start, 0.0, 0.0, start)]
+		childrenNodes = []
 		curNode = start
 		curPath = start
 		prevNode = start
-		while len(deque):
-			curItem = deque.pop()
+
+		while len(curLevelNodes) or len(childrenNodes):
+			if not len(curLevelNodes):
+				# Sort based on which children node is heuristically closer to the objective,
+				# then use lexicographical order in case of draw.
+				childrenNodes.sort(key=lambda item : item[1] + item[2], reverse=True)
+
+				size = len(childrenNodes)
+				if size > keptChildrens:
+					childrenNodes = childrenNodes[size - keptChildrens:size]
+				curLevelNodes = sorted(childrenNodes, key=operator.itemgetter(0), reverse=True)
+				childrenNodes.clear()
+
+			curItem = curLevelNodes.pop()
 			aux = curItem[0]
 			if not prune or not visitedVec[aux]:
 				if plot:
@@ -336,7 +351,6 @@ class graph:
 					self._plotColorLocation(curNode, color='Red', time=plotSpeed)
 
 				if curNode != end:
-					auxList = []
 					adjList = list(self.edgeList[curNode]['adj'].keys())
 
 					for a in adjList:
@@ -347,23 +361,11 @@ class graph:
 							else:
 								heuristicCost = self._calcDist(a, end)
 							newChildren = (a, curCost + self.edgeList[curNode]['adj'][a], heuristicCost, curPath + a)
-							auxList.append(newChildren)
-
-					# Sort based on which children node is heuristically closer to the objective,
-					# then use lexicographical order in case of draw.
-
-					deque.clear()
-					auxList.sort(key=lambda item : item[1] + item[2], reverse=True)
-
-					print(auxList)
-					size = len(auxList)
-					if size > keptChildrens:
-						auxList = auxList[size - keptChildrens:size]
-					deque = sorted(auxList, key=operator.itemgetter(0))
-					print(deque)
+							childrenNodes.append(newChildren)
 
 				else:
-					deque.clear()
+					curLevelNodes.clear()
+					childrenNodes.clear()
 
 		output['path'], output['distance'] = self._calculateTotalDist(curPath=curPath, goal=end)
 
