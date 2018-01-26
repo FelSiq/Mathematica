@@ -146,26 +146,26 @@ class graph:
 	It's a Beam Search with keptChildren = 1.
 	"""
 	def hillClimbing(self, start, end, prune=True, 
-		statisticOutput=False, plot=False, plotSpeed=0.2):
+		statisticOutput=False, plot=False, plotSpeed=0.2, lexicographical=True):
 		if not self.geometrical:
 			print('error: hillClimbing works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
 		return self._informedSearch(start, end, prune, 
-			statisticOutput, 1, plot, plotSpeed, 'Hill Climbing algorithm')
+			statisticOutput, 1, plot, plotSpeed, 'Hill Climbing algorithm',lexicographical)
 
 	"""
 	Beam Search is like BFS, but it does only keep w childrens that is 
 	closer to the goal per search tree level.
 	"""
 	def beamSearch(self, start, end, keptChildren=3, prune=True, 
-		statisticOutput=False, plot=False, plotSpeed=0.2):
+		statisticOutput=False, plot=False, plotSpeed=0.2, lexicographical=True):
 		if not self.geometrical:
 			print('error: beamSearch works only with',
 				'coordinate systems (graph is in space with null dimension).')
 			return None
 		return self._informedSearch(start, end, prune, 
-			statisticOutput, keptChildren, plot, plotSpeed, 'Beam Search algorithm')
+			statisticOutput, keptChildren, plot, plotSpeed, 'Beam Search algorithm',lexicographical)
 
 	def _plotColorLocation(self, curNode, color='Blue', time=0.0):
 		curPosition = self.edgeList[curNode]['coord']
@@ -306,7 +306,7 @@ class graph:
 
 	def _informedSearch(self, start, end, prune=True, 
 		statisticOutput=False, keptChildrens=1, plot=False, plotSpeed=0.2, 
-		title='Generic Informed Search algorithm'):
+		title='Generic Informed Search algorithm', lexicographical=True):
 		output = self._genOutput()
 
 		if plot:
@@ -329,7 +329,10 @@ class graph:
 				size = len(childrenNodes)
 				if size > keptChildrens:
 					childrenNodes = childrenNodes[size - keptChildrens:size]
-				curLevelNodes = sorted(childrenNodes, key=operator.itemgetter(0), reverse=True)
+				if lexicographical:
+					curLevelNodes = sorted(childrenNodes, key=operator.itemgetter(0), reverse=True)
+				else:
+					curLevelNodes = [i for i in a]
 				childrenNodes.clear()
 
 			curItem = curLevelNodes.pop()
