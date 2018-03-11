@@ -4,16 +4,19 @@ and tries to use the Iterative Fixed Point Theorem to find a root z of f which i
 """
 
 from rpy2 import robjects as ro
+import re
 import sys
 
 def funcFixedPoint(g, a, it=100):
 	xVal = a
+	findVar = re.compile(r'\bx\b')
+
 	for i in range(it):
-		xVal = ro.r(g.replace('x', str(xVal)))[0]
+		xVal = ro.r(findVar.sub(str(xVal), g))[0]
 	return xVal
 
 if __name__ == '__main__':
-	if not (4 < len(sys.argv) < 7):
+	if not (3 < len(sys.argv) < 6):
 		print('usage:', sys.argv[0], '<f function> <g function> <x0>' 
 			+ ' <iteration number (optional)>')
 		exit(1)
@@ -28,4 +31,4 @@ if __name__ == '__main__':
 
 	z = funcFixedPoint(g, a, itNum)
 	print('f Root/g Fixed Point = z =', z)
-	print('f(z) =', ro.r(f.replace('x', str(z)))[0])
+	print('f(z) =', ro.r(re.sub(r'\bx\b', str(z), f))[0])
