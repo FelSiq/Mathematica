@@ -46,19 +46,22 @@ def leastSquares(x, y):
 
 def printSolution(coeffs):
 	dataDimension = len(coeffs) - 1
-	separator = ''
-	if dataDimension == 1:
-		separator = 'line'
-	elif dataDimension == 2:
-		separator = 'plane'
+	if dataDimension <= 0:
+		print('No geometric data descriptor found (no dimensions available)')
 	else:
-		separator = 'hyperplane'
+		separator = ''
+		if dataDimension == 1:
+			separator = 'line'
+		elif dataDimension == 2:
+			separator = 'plane'
+		else:
+			separator = 'hyperplane'
 
-	print('best data descriptor', separator, 'coefficients are:')
-	letter = ord('a')
-	for i in coeffs:
-		print (chr(letter) + ':', round(i, 3))
-		letter += 1
+		print('best data descriptor', separator, 'coefficients are:')
+		letter = ord('a')
+		for i in coeffs:
+			print (chr(letter) + ':', round(i, 3))
+			letter += 1
 
 # Program driver
 if __name__ == '__main__':

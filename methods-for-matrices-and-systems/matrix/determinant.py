@@ -1,4 +1,4 @@
-from matrix import rref 
+from matrix import rref
 
 def reducedDet(m):
 	if len(m) != len(m[0]):

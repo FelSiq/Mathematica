@@ -4,8 +4,7 @@ def rref(m, reduced = True, returnReduced = True):
 	# if pivot, in module, is smaller than DELTA, assume it's zero
 	DELTA = 1.0e-10
 
-	mCol = len(m[0])
-	mRow = len(m)
+	mRow, mCol = matrix.mshape(m)
 
 	mReduced = matrix.mcopy(m)
 	matReverse = matrix.midentity(mRow)
@@ -61,21 +60,20 @@ if __name__ == '__main__':
 	# Otherwise, it will be the Row Reduced Echelon Form diagonal (if square) matrix.
 	reducted, elimination = rref(mat, reduced = True)
 	print('Matrix:')
-	mprint(mat)
+	matrix.mprint(mat)
 	print('\n\nReducted (should be identity for reversible square matrix):')
-	mprint(reducted)
+	matrix.mprint(reducted)
 	print('\n\nElimination (should be inverse for reversible square matrix):')
-	mprint(elimination)
+	matrix.mprint(elimination)
 	print('\n\nElimination x Mat == Reducted?:')
-	mprint(mmult(elimination, mat))
+	matrix.mprint(matrix.mmult(elimination, mat))
 
 	identity, redInverse = rref(elimination)
 
 	print('\n\nShould be identity:')
-	mprint(identity)
+	matrix.mprint(identity)
 	print('\n\nElimination reversed:')
-	mprint(redInverse)
+	matrix.mprint(redInverse)
 
 	print('\n\nElimination^-1 x Reducted == Matrix? :')
-	mprint(mmult(redInverse, reducted))
-
+	matrix.mprint(matrix.mmult(redInverse, reducted))

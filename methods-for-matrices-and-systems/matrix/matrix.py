@@ -14,22 +14,36 @@ def mshape(m):
 	nrow = len(m)
 	ncol = 0
 	if nrow:
-		ncol = len(m[0])
+		if type(m[0]) == list:
+			ncol = len(m[0])
+		else:
+			# Then it's just a (transposed) vector
+			ncol = nrow
+			nrow = 1
 	return (nrow, ncol)
 
 def mtransp(m):
-	mRow = len(m)
-	mCol = len(m[0])
+	mRow, mCol = mshape(m)
 
 	t = minit(mCol, mRow)
-	for i in range(mRow):
-		for j in range(mCol):
-			t[j][i] = m[i][j]
-
+	if mRow != 1 and mCol != 1:
+		for i in range(mRow):
+			for j in range(mCol):
+				t[j][i] = m[i][j]
+	elif mRow != 1 and mCol == 1:
+		for i in range(mRow):
+			t[i] = m[i][0]
+	elif mRow == 1 and mCol != 1:
+		for i in range(mCol):
+			t[i][0] = m[i]
+	else:
+		t[0][0] = m[0][0]
 	return t
 
 def minit(rows, cols, n = 0):
-	return [[n] * cols for i in range(rows)]
+	if rows > 1:
+		return [[n] * cols for i in range(rows)]
+	return [n] * cols
 
 def midentity(order = 1):
 	if order <= 0:
@@ -41,10 +55,8 @@ def midentity(order = 1):
 	return m
 
 def mmult(m1, m2):
-	m1Col = len(m1[0])
-	m2Col = len(m2[0])
-	m1Row = len(m1)
-	m2Row = len(m2)
+	m1Row, m1Col = mshape(m1)
+	m2Row, m2Col = mshape(m2)
 	
 	if m1Col != m2Row:
 		print('E: can\'t multiply a matrix with', m1Col, 'columns with another one with', m2Row, 'rows.')
@@ -55,13 +67,11 @@ def mmult(m1, m2):
 			for k in range(m1Col):
 				m3[i][j] += m1[i][k] * m2[k][j]
 	# If matrix resultant is a 1x1, then it was just a dot product and, then, return just the value
-	return m3 if len(m3) > 1 else m3[0][0]
+	return m3[0][0] if (m1Row == 1 and m2Col == 1) else m3
 
 def msub(m1, m2):
-	m1Col = len(m1[0])
-	m2Col = len(m2[0])
-	m1Row = len(m1)
-	m2Row = len(m2)
+	m1Row, m1Col = mshape(m1)
+	m2Row, m2Col = mshape(m2)
 	
 	if m1Col != m1Col or m2Row != m2Row:
 		print('E: can\'t subtract two matrices with different dimensions.')
@@ -91,8 +101,7 @@ def mrowswap(m, row1, row2):
 	return mmult(mSwap, mCopy)
 
 def mmconst(m, const):
-	mRow = len(m)
-	mCol = len(m[0])
+	mRow, mCol = mshape(m)
 
 	n = minit(mRow, mCol)
 	for i in range(mRow):
