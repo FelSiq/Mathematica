@@ -10,13 +10,13 @@ This program solve a Ax = b system using Gauss-Seidel algorithm.
 
 """
 
-def relativeError(a, b):
-	return max(a - b)/max(b)
+def relativeError(a, b, delta=1e-13):
+	return max(a - b)/(max(b) + delta)
 
 def minit(rownum, colnum, val=0.0):
 	return np.matrix([[val] * colnum for i in range(rownum)])
 
-def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5):
+def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False):
 	if type(A) != np.matrix:
 		print('Error: expecting np.matrix as input matrix \'A\'.')
 		return None
@@ -38,13 +38,17 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5):
 	n = ArowNum
 	L = minit(n, n)
 	U = minit(n, n)
+
 	for i in range(n):
-		for j in range(i+1):
-			L[i][j] = A[i][j]
-			U[j][i] = A[j][i] if i != j else 0.0
+		for j in range(i, n):
+			L[j, i] = A[j, i]
+			U[i, j] = A[i, j] if i !=j else 0.0
+
+	print(L)
+	print(U)
 
 	try:
-		Linv = L.I()
+		Linv = L.I
 	except:
 		print('Error: \'L\' (lower triangular matrix) is singular!')
 		return None
@@ -52,11 +56,24 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5):
 	xCur = copy.deepcopy(x0)
 	i = 0
 	err = epsilon * 2.0
+
+	if showError:
+		print('#        : Relative error:')
+
 	while i < itMax and err > epsilon:
 		i += 1
 		xNew = Linv * (b - U * xCur)
 		err = relativeError(xNew, xCur)
 		xCur = xNew
+		if showError:
+			print('{val:<{fill}}'.format(val=i, fill=8), ':', float(err))
+	
+	print('Process finished. ', end='')
+	if err <= epsilon:
+		print('(algorithm converged to a relative error <= ' + str(epsilon) + ')')
+	else:
+		print('(max number of iterations reached: ' + str(itMax) + ')')
+
 	return xCur
 
 def __readfile__(filepath):
@@ -87,7 +104,7 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 			A[i][i+1] = -1.0
 		A[n-1][n-1] = 4.0
 		A = np.matrix(A)
-		b = np.matrix([1.0/(1.0 + i) for i in range(n)]) 
+		b = np.matrix([[1.0/(1.0 + i)] for i in range(n)]) 
 	if x0fp:
 		x0 = __readfile__(x0fp) 
 	else:
@@ -96,7 +113,7 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 	return A, b, x0
 
 def __showHelp__():
-	print('Gauss-Seidel Linear System Solving by Felipe Alves Siqueira')
+	print('Gauss-Seidel Method for Linear System Solving by Felipe Alves Siqueira')
 	print('Program usage:', sys.argv[0], 
 		'[-a matrixFilepath] [-b vectorFilepath] [-x x0Filepath]',
 		'[-n matrixSize] [-i itMax] [-e epsilon]')
@@ -107,24 +124,27 @@ def __showHelp__():
 		'-n:\tdimension of \'A\', \'b\' and \'x0\' for default values when filepaths was not specified. Default is 10.',
 		'-i:\tmaximum iteration of Gauss-Seidel method. Default is 100.',
 		'-e:\tmaximum relative error (||a - b||[inf]/||a||[inf]) on a single Gauss-Seidel iteration. Default is 1e^-5.', 
+		'-s:\tshow relative error each iteration of Gauss-Seidel method.',
 		sep='\n')
 
 def translateArgs(argv):
 	param = {'-n': 10, '-i': 100, '-e': 1e-5, 
 		'-a': None, '-x': None, '-b': None, 
-		'-h': False, '--help': False}
+		'-h': False, '--help': False, '-s': False}
 
 	i = 1
 	while i < len(argv):
 		if argv[i] in param:
-			if argv[i] != '-h' and argv[i] != '--help':
+			if argv[i] != '-h' and argv[i] != '--help' and argv[i] != '-s':
 				param[argv[i]] = argv[i + 1]
+				i += 1
 			else:
 				param[argv[i]] = True
 		else:
 			print('Warning: unknown option ', argv[i], 
 				', ignoring it.', sep='\'')
-		i += 2
+			i += 1
+		i += 1
 
 	if param['-h'] or param['--help']:
 		__showHelp__()
@@ -136,7 +156,7 @@ def translateArgs(argv):
 		n = param['-n']
 		epsilon = param['-e']
 		itMax = param['-i']
-		
+		showError = param['-s']
 
 		try:
 			n = int(n)
@@ -166,18 +186,18 @@ def translateArgs(argv):
 			print('Warning: you must specify options -a (coefficients matrix)',
 				'and -b (solution vector) together.')
 
-		return n, epsilon, itMax, Afp, bfp, x0fp
+		return n, epsilon, itMax, Afp, bfp, x0fp, showError
 
 if __name__ == '__main__':
-	n, epsilon, itMax, Afp, bfp, x0fp = translateArgs(sys.argv)
+	n, epsilon, itMax, Afp, bfp, x0fp, showError = translateArgs(sys.argv)
 	if n and itMax and epsilon:
 		A, b, x0 = initProblemMatrices(n, Afp, bfp, x0fp)
 		if len(A) and len(b) and len(x0):
 			print(A)
 			print(b)
 			print(x0)
-			r = gaussSeidel(A, b, x0, itMax, epsilon)
-			if r:
+			r = gaussSeidel(A, b, x0, itMax, epsilon, showError)
+			if type(r) is np.matrix:
 				print(r)
 		else:
 			print('Error: something went wrong with input matrices.')
