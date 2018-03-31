@@ -17,14 +17,17 @@ if exists a z real that f(z) = 0, then z is closer to |f(m)| than |f(n)| if and 
 def bissection(function, a, b, n=100, var='x'):
 	subVarRe = regex.compile(r'\b' + var + r'\b')
 	for i in range(n):
-		fa = ro.r(subVarRe.sub(str(a), function))[0] 
-		fb = ro.r(subVarRe.sub(str(b), function))[0] 
-		curXMean = (a*fb - b*fa)/(fb - fa) 
-		curImgVal = ro.r(subVarRe.sub(str(curXMean), function))[0]
-		if curImgVal * fa < 0:
-			b = curXMean
+		fa = ro.r(subVarRe.sub('('+str(a)+')', function))[0] 
+		fb = ro.r(subVarRe.sub('('+str(b)+')', function))[0]
+		if fb != fa: 
+			curXMean = (a*fb - b*fa)/(fb - fa) 
+			curImgVal = ro.r(subVarRe.sub('('+str(curXMean)+')', function))[0]
+			if curImgVal * fa < 0:
+				b = curXMean
+			else:
+				a = curXMean
 		else:
-			a = curXMean
+			break;
 
 	return curXMean
 
@@ -50,5 +53,5 @@ if __name__ == '__main__':
 		exit(3)
 
 	root = bissection(function, a, b, n)
-	print('root (z):', root, '\tAbsError:', abs(ro.r(regex.sub(r'\bx\b', str(root), function))[0])) 
+	print('root (z):', root, '\tAbsError:', abs(ro.r(regex.sub(r'\bx\b', '('+str(root)+')', function))[0])) 
 	

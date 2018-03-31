@@ -12,7 +12,7 @@ def funcFixedPoint(g, a, it=100):
 	findVar = re.compile(r'\bx\b')
 
 	for i in range(it):
-		xVal = ro.r(findVar.sub(str(xVal), g))[0]
+		xVal = ro.r(findVar.sub('('+str(xVal)+')', g))[0]
 	return xVal
 
 if __name__ == '__main__':
@@ -31,4 +31,4 @@ if __name__ == '__main__':
 
 	z = funcFixedPoint(g, a, itNum)
 	print('f Root/g Fixed Point = z =', z)
-	print('f(z) =', ro.r(re.sub(r'\bx\b', str(z), f))[0])
+	print('f(z) =', ro.r(re.sub(r'\bx\b', '('+str(z)+')', f))[0])

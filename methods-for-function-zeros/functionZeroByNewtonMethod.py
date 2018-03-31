@@ -17,8 +17,8 @@ def newtonMethod(fun, x0, it=10, var=r'x'):
 	subVarRegex = re.compile(r'\b' + var + r'\b')
 
 	for i in range(it):
-		funVal = ro.r(subVarRegex.sub(str(xCur), fun))[0]
-		derivVal = ro.r(subVarRegex.sub(str(xCur), funDev))[0]
+		funVal = ro.r(subVarRegex.sub('('+str(xCur)+')', fun))[0]
+		derivVal = ro.r(subVarRegex.sub('('+str(xCur)+')', funDev))[0]
 		xCur -= funVal/derivVal 
 	return xCur
 
@@ -34,4 +34,4 @@ if __name__ == '__main__':
 	approxZero = newtonMethod(sys.argv[1], float(sys.argv[2]), itNum)
 
 	print('~z:', approxZero)
-	print('f(~z):', ro.r(re.sub(r'\bx\b', str(approxZero), sys.argv[1]))[0])
+	print('f(~z):', ro.r(re.sub(r'\bx\b', '('+str(approxZero)+')', sys.argv[1]))[0])

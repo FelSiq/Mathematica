@@ -11,13 +11,13 @@ def secantMethod(fun, a, b, it=10, var=r'x'):
 	xA = a
 	xB = b
 
-	subVarRegex = re.compile(r'\b' + r'x' + r'\b')
+	subVarRegex = re.compile(r'\b' + var + r'\b')
 
 	i = 0
 	while i < it:
 		i += 1
-		funValA = ro.r(subVarRegex.sub(str(xA), fun))[0]
-		funValB = ro.r(subVarRegex.sub(str(xB), fun))[0]
+		funValA = ro.r(subVarRegex.sub('('+str(xA)+')', fun))[0]
+		funValB = ro.r(subVarRegex.sub('('+str(xB)+')', fun))[0]
 		if funValA - funValB:
 			aux = xA
 			xA -= funValA * (xA - xB)/(funValA - funValB)
@@ -38,4 +38,4 @@ if __name__ == '__main__':
 	approxZero = secantMethod(sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), itNum)
 
 	print('~z:', approxZero)
-	print('f(~z):', ro.r(re.sub(r'\bx\b', str(approxZero), sys.argv[1]))[0])
+	print('f(~z):', ro.r(re.sub(r'\bx\b', '('+str(approxZero)+')', sys.argv[1]))[0])

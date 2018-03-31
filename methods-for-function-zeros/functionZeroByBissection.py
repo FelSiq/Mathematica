@@ -11,8 +11,8 @@ def bissection(function, a, b, n=100, retList=False, var='x'):
 		curXMean = (start + end) * 0.5		
 		xMeans.append(curXMean)
 		
-		val1 = ro.r(subVarRe.sub(str(curXMean), function))[0] 
-		val2 = ro.r(subVarRe.sub(str(start), function))[0] 
+		val1 = ro.r(subVarRe.sub('('+str(curXMean)+')', function))[0] 
+		val2 = ro.r(subVarRe.sub('('+str(start)+')', function))[0] 
 
 		if val1 * val2 > 0:
 			# The sign does not change between f(curXMean) and f(start) i.e. the 
@@ -50,5 +50,5 @@ if __name__ == '__main__':
 		exit(3)
 
 	root = bissection(function, a, b, n)
-	print('root (z):', root, '\tAbsError:', abs(ro.r(regex.sub(r'\bx\b', str(root), function))[0])) 
+	print('root (z):', root, '\tAbsError:', abs(ro.r(regex.sub(r'\bx\b', '('+str(root)+')', function))[0])) 
 	
