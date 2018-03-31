@@ -1,0 +1,1 @@
+-a ./testcases/0A.in -b ./testcases/0b.in -x ./testcases/0x0.in -e 1e-4 -i 1000
