@@ -1,3 +1,22 @@
+def missymmetric(m):
+	nrow, ncol = mshape(m)
+
+	if nrow != ncol:
+		return False
+
+	for i in range(1, nrow):
+		for j in range(0, i):
+			if m[i][j] != m[j][i]:
+				return False
+	return True
+
+def mshape(m):
+	nrow = len(m)
+	ncol = 0
+	if nrow:
+		ncol = len(m[0])
+	return (nrow, ncol)
+
 def mtransp(m):
 	mRow = len(m)
 	mCol = len(m[0])
@@ -83,7 +102,10 @@ def mmconst(m, const):
 	return n
 
 def mprint(m):
-	for i in m:
-		for j in i:
-			print('{value: <{space}}'.format(value = round(j, 6), space = 15), end = '')
-		print()
+	if m:
+		for i in m:
+			if i:
+				for j in i:
+					print('{value: <{space}}'.format(value = round(j, 6), space = 15), end = '')
+				print()
+
