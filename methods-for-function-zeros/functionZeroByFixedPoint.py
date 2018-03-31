@@ -7,9 +7,9 @@ from rpy2 import robjects as ro
 import re
 import sys
 
-def funcFixedPoint(g, a, it=100):
+def funcFixedPoint(g, a, it=100, var='x'):
 	xVal = a
-	findVar = re.compile(r'\bx\b')
+	findVar = re.compile(r'\b' + var + r'\b')
 
 	for i in range(it):
 		xVal = ro.r(findVar.sub('('+str(xVal)+')', g))[0]

@@ -9,7 +9,7 @@ It does not check any sequence convergence criteria.
 
 
 # a.k.a. "Tangent Method"
-def newtonMethod(fun, x0, it=10, var=r'x'):
+def newtonMethod(fun, x0, it=100, var=r'x'):
 	xCur = x0
 	ro.r('library(Deriv)')
 	funDev = ro.r('Deriv(\'' + fun + '\')')[0]
