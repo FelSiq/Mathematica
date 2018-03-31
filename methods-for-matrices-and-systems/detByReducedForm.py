@@ -1,12 +1,11 @@
-with open('rref.py', 'r') as f:
-	exec(f.read())
+from matrix import rref 
 
 def reducedDet(m):
 	if len(m) != len(m[0]):
 		print('Matrix should be square to have a properly determinant.')
 		return None
 
-	reduced, elim = rref(m, reduced = False)
+	reduced, elim = rref.rref(m, reduced = False)
 
 	det = 1.0
 	for i in range(len(reduced)):

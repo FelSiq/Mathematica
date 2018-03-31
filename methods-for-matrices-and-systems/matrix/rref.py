@@ -1,5 +1,4 @@
-with open('matrix.py', 'r') as f:
-	exec(f.read())
+from matrix import matrix
 
 def rref(m, reduced = True, returnReduced = True):
 	# if pivot, in module, is smaller than DELTA, assume it's zero
@@ -8,8 +7,8 @@ def rref(m, reduced = True, returnReduced = True):
 	mCol = len(m[0])
 	mRow = len(m)
 
-	mReduced = mcopy(m)
-	matReverse = midentity(mRow)
+	mReduced = matrix.mcopy(m)
+	matReverse = matrix.midentity(mRow)
 
 	shift = 0
 	i = 0
@@ -19,8 +18,8 @@ def rref(m, reduced = True, returnReduced = True):
 		# Check for row exchanges
 		p = i + 1
 		while abs(pivot) < DELTA and p < mRow:
-			mReduced = mrowswap(mReduced, i, p)
-			matReverse = mrowswap(matReverse, i, p)
+			mReduced = matrix.mrowswap(mReduced, i, p)
+			matReverse = matrix.mrowswap(matReverse, i, p)
 			pivot = mReduced[i][i + shift]
 			p += 1
 
@@ -50,7 +49,6 @@ def rref(m, reduced = True, returnReduced = True):
 	return matReverse
 
 # Program drive
-"""
 if __name__ == '__main__':
 	mat = [
 		[1, 4, 5],
@@ -80,4 +78,4 @@ if __name__ == '__main__':
 
 	print('\n\nElimination^-1 x Reducted == Matrix? :')
 	mprint(mmult(redInverse, reducted))
-"""
+

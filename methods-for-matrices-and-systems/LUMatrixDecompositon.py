@@ -1,5 +1,4 @@
-with open('matrix.py') as f:
-	exec(f.read())
+from matrix import matrix
 
 # Using DoLittle technique l[i,i] = 1, for all i in [0, n], l in L 
 def LU(M):
@@ -10,8 +9,8 @@ def LU(M):
 		print('Error: expecting M to be a square matrix.')
 		return None, None
 
-	L = minit(n, n)
-	U = minit(n, n)
+	L = matrix.minit(n, n)
+	U = matrix.minit(n, n)
 
 	#DoLittle Technique
 	for i in range(n):
@@ -41,10 +40,10 @@ if __name__ == '__main__':
 	L, U = LU(M)
 	
 	print('Original Matrix (M):')
-	mprint(M)
+	matrix.mprint(M)
 	print('L:')
-	mprint(L)
+	matrix.mprint(L)
 	print('U:')
-	mprint(U)
+	matrix.mprint(U)
 	print('LU - M (must be all equal to 0):')
-	mprint(msub(mmult(L, U), M))
+	matrix.mprint(matrix.msub(matrix.mmult(L, U), M))

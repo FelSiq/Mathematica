@@ -17,13 +17,11 @@ xn	yn	zn	..	kn
 where v1 = [x1 x2 x3 .. xn]^T, ..., vm = [k1 k2 k3 .. kn]^T
 
 """
-
-with open('rref.py', 'r') as f:
-	exec(f.read())
+from matrix import matrix, rref
 
 def checkIndenpendency(vecs):
-	vCopy = mcopy(vecs)
-	reducted, reductor = rref(vCopy)
+	vCopy = matrix.mcopy(vecs)
+	reducted, reductor = rref.rref(vCopy)
 	
 	dep = 0
 	for r in reducted:
@@ -39,7 +37,7 @@ def vecnorm(vec):
 
 def gso(vecs):
 	# 1. Check indenpendency two-by-two
-	colVecs = mtransp(vecs)
+	colVecs = matrix.mtransp(vecs)
 
 	if not checkIndenpendency(colVecs):
 		print('E: These vectors aren\'t indenpendent.')
@@ -54,12 +52,12 @@ def gso(vecs):
 	for i in range(len(colVecs)):
 		newBaseVec = [[k[0]] for k in colVecs[i]]
 		for j in range(i):
-			coeff1 = mmult(mtransp(newVectors[j]), newBaseVec)
-			coeff2 = mmult(mtransp(newVectors[j]), newVectors[j])
-			curProj = mmconst(newVectors[j], coeff1/coeff2)
-			newBaseVec = msub(newBaseVec, curProj)
+			coeff1 = matrix.mmult(matrix.mtransp(newVectors[j]), newBaseVec)
+			coeff2 = matrix.mmult(matrix.mtransp(newVectors[j]), newVectors[j])
+			curProj = matrix.mmconst(newVectors[j], coeff1/coeff2)
+			newBaseVec = matrix.msub(newBaseVec, curProj)
 
-		newVectors.append(mmconst(newBaseVec, 1.0/vecnorm(newBaseVec)))
+		newVectors.append(matrix.mmconst(newBaseVec, 1.0/vecnorm(newBaseVec)))
 
 	return newVectors
 
@@ -86,9 +84,9 @@ if __name__ == '__main__':
 		# matrix must be the Identity Matrix.
 		print('\nTruth proof (should always be the identity matrix):')
 		nVecs = len(newvecs)
-		resultMat = minit(nVecs, nVecs)
+		resultMat = matrix.minit(nVecs, nVecs)
 		for i in range(nVecs):
 			for j in range(nVecs):
-				resultMat[i][j] = mmult(mtransp(newvecs[i]), newvecs[j])
+				resultMat[i][j] = matrix.mmult(matrix.mtransp(newvecs[i]), newvecs[j])
 
-		mprint(resultMat)
+		matrix.mprint(resultMat)

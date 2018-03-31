@@ -1,17 +1,42 @@
 # This is the linear algebra approach for linear regression with Least Squares method
-with open('rref.py', 'r') as f:
-	exec(f.read())
+from matrix import rref, matrix
+
+"""
+Least Squase implementation based on the Projection idea:
+
+if Ax = b don't have a solution (more equations than variables), then
+(A^T)Ax = (A^T)b <=> x = (A^T * A)^-1 * A^T * b is a good approximation
+for x.
+
+Sample input (7 data points at R^5):
+1 2 3 4 5
+1 6 7 8 9
+2 3 4 5 6
+1 2 3 4 1
+1 9 0 8 7
+1 2 3 4 5
+6 4 3 1 2
+
+Sample output:
+best data descriptor hyperplane coefficients are:
+a: 1.0
+b: -0.561
+c: 0.045
+d: 1.848
+e: -3.742
+
+"""
 
 def leastSquares(x, y):
-	xTransp = mtransp(x)
-	newSystem = mmult(xTransp, x)
-	newLabels = mmult(xTransp, y)
+	xTransp = matrix.mtransp(x)
+	newSystem = matrix.mmult(xTransp, x)
+	newLabels = matrix.mmult(xTransp, y)
 
 	# Augmented matrix for the system
 	for i in range(len(newSystem)):
 		newSystem[i] += newLabels[i]
 
-	reduced, redutor = rref(newSystem)
+	reduced, redutor = rref.rref(newSystem)
 	
 	coeffs = list()
 	# Create solutions
@@ -29,7 +54,7 @@ def printSolution(coeffs):
 	else:
 		separator = 'hyperplane'
 
-	print('best data separator', separator, 'coefficients are:')
+	print('best data descriptor', separator, 'coefficients are:')
 	letter = ord('a')
 	for i in coeffs:
 		print (chr(letter) + ':', round(i, 3))

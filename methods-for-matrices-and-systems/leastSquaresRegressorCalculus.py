@@ -1,6 +1,28 @@
+"""
+
+Expected output: 
+n data points (x0, ..., xm) with m dimension, one at each input line.
+
+Sample input (7 data points at R^5):
+1 2 3 4 5
+1 6 7 8 9
+2 3 4 5 6
+1 2 3 4 1
+1 9 0 8 7
+1 2 3 4 5
+6 4 3 1 2
+
+Sample output:
+best data descriptor hyperplane coefficients are:
+a: 1.0
+b: -0.561
+c: 0.045
+d: 1.848
+e: -3.742
+"""
+
 # This is the calculus approach for linear regression with Least Squares method
-with open('rref.py', 'r') as f:
-	exec(f.read())
+from matrix import rref
 
 # This solution uses partial derivatives concept in order do minimize the
 # squared error sum.
@@ -19,7 +41,7 @@ def leastSquares(x, y):
 			equation[-1] += x[j][i] * y[j]
 		system.append(equation)
 
-	reduced, redutor = rref(system)
+	reduced, redutor = rref.rref(system)
 	
 	coeffs = list()
 	# Create solutions
@@ -37,7 +59,7 @@ def printSolution(coeffs):
 	else:
 		separator = 'hyperplane'
 
-	print('best data separator', separator, 'coefficients are:')
+	print('best data descriptor', separator, 'coefficients are:')
 	letter = ord('a')
 	for i in coeffs:
 		print (chr(letter) + ':', round(i, 3))
