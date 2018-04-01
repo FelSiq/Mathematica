@@ -92,16 +92,17 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 		# Default A: pentadiagonal matrix defined on problem specification
 		# Default b: 1.0/i for i = 1,..., n 
 		A = [[0.0] * n for i in range(n)]
-		for i in range(n-3):
-			A[i][i] = 4.0
-			A[i][i+3] = -1.0
-			A[i+3][i] = -1.0
-			A[i][i+1] = -1.0
-			A[i+1][i] = -1.0
-		for i in range(n-3, n-1):
-			A[i][i] = 4.0
-			A[i+1][i] = -1.0
-			A[i][i+1] = -1.0
+		if n > 1:
+			for i in range(n-3):
+				A[i][i] = 4.0
+				A[i][i+3] = -1.0
+				A[i+3][i] = -1.0
+				A[i][i+1] = -1.0
+				A[i+1][i] = -1.0
+			for i in range(n-3, n-1):
+				A[i][i] = 4.0
+				A[i+1][i] = -1.0
+				A[i][i+1] = -1.0
 		A[n-1][n-1] = 4.0
 		A = np.matrix(A)
 		b = np.matrix([[1.0/(1.0 + i)] for i in range(n)]) 
