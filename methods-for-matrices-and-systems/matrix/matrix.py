@@ -40,12 +40,20 @@ def mtransp(m):
 		t[0][0] = m[0][0]
 	return t
 
-def minit(rows, cols, n = 0):
+def minit(rows, cols, n=0):
 	if rows > 1:
 		return [[n] * cols for i in range(rows)]
 	return [n] * cols
 
-def midentity(order = 1):
+def mread(filepath, sep=None):
+	m = []
+	with open(filepath, 'r') as f:
+		for lines in f:
+			data = list(map(float, lines.split(sep=sep)))
+			m.append(data)
+	return m		
+
+def midentity(order=1):
 	if order <= 0:
 		print('E: Identity matrix order should be at least 1.')
 		return None
@@ -115,6 +123,7 @@ def mprint(m):
 		for i in m:
 			if i:
 				for j in i:
-					print('{value: <{space}}'.format(value = round(j, 6), space = 15), end = '')
+					print('{value: <{space}}'.format(value = round(j, 6) if type(j) != str else j, 
+						space = 15), end = '')
 				print()
 
