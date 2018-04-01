@@ -70,7 +70,8 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeErro
 	
 	print('Process finished. ', end='')
 	if err <= epsilon:
-		print('(algorithm converged to a', errorType, 'error <= ' + str(epsilon) + ')')
+		print('(algorithm converged to a', errorType, 'error', 
+			float(err), '<=', epsilon, 'at iteration #' + str(i) + ')')
 	else:
 		print('(max number of iterations reached: ' + str(itMax) + ')')
 
@@ -82,7 +83,6 @@ def __readfile__(filepath):
 		for lines in f:
 			values.append(lines.split())
 	return np.matrix(values, dtype=float)
-			
 
 def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 	if Afp and bfp:
@@ -108,8 +108,9 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 	if x0fp:
 		x0 = __readfile__(x0fp) 
 	else:
+		bnRow, bnCol = b.shape
 		# Default x0: zero vector in R^n
-		x0 = np.matrix([[0.0] for i in range(n)]) 
+		x0 = np.matrix([[0.0] for i in range(bnRow)]) 
 	return A, b, x0
 
 def __showHelp__():
