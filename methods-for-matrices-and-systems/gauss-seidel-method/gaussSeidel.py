@@ -1,22 +1,20 @@
 from enum import IntEnum
 import numpy as np
 import sys
-import copy
 
 """
 INFORMATION:
+This program solve a Ax = b system using Gauss-Seidel numeric method for
+Linear System solving. It's very similar to the Jacobi Method, but it's
+faster on a single-core run (Jacobi Method's better with parallel programming).
 
-This program solve a Ax = b system using Gauss-Seidel algorithm.
-
+Gauss-Seidel numeric method is a anytime algorithm, wich means that it
+always have a answer, independently of how much time was wasted running
+at til a certain execution point. Howhever, the more iterations the al-
+gorithm perform, the more precise will be the output.
 """
 
-def error(a, b, delta=1e-13, relative=False):
-	denominator = (max(a) + delta) if relative else 1.0
-	return max(a - b)/denominator
-
-def minit(rownum, colnum, val=0.0):
-	return np.matrix([[val] * colnum for i in range(rownum)])
-
+# Main function of this program. Effectively runs the Gauss-Seidel iterative method
 def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeError=False):
 	if type(A) != np.matrix:
 		print('Error: expecting np.matrix as input matrix \'A\'.')
@@ -26,48 +24,81 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeErro
 	browNum, bcolNum = b.shape
 	x0rowNum, x0colNum = x0.shape
 
+	# Check if x0 and b is a column matrix (or a vector)
 	if x0colNum != 1 or bcolNum != 1:
 		print('Error: \'b\' and \'x0\' must be a vector',
 			'(n rows and 1 single column).')
 		return None
 
+	# Check if matrix A, b and x0 dimensions are compatible 
+	# in between each other for a equation system. In this case,
+	# A must be square and have the exactly same dimension of
+	# b vector and x0 vector.
 	if not (ArowNum == AcolNum == browNum == x0rowNum):
 		print('Error: matrix \'A\' must be square with n dimensions,',
 			'and vectors \'b\' and \'x0\' must be size compatible (in R^n).')
 		return None
 
 	n = ArowNum
+
+	# Init L (Lower-triangular) and U (Upper-triangular matrices)
 	L = minit(n, n)
 	U = minit(n, n)
 
+	# L is defined as a lower-triangular matrix with the same elements
+	# inside and below the main diagonal of A matrix, i.e:
+	#	[a11 	0	0	...	0  ]
+	#	[a21	a22	0	...	0  ]
+	# L =	[a31	a32	a33	...	0  ]
+	#	[...	...	...	...	0  ]
+	#	[an1	an2	an3	...	ann]
+	#
+	# U is defined as a upper-triangular matrix that have all elements
+	# strictly above the main diagonal of A, which means that U = A - L.
 	for i in range(n):
 		for j in range(i, n):
 			L[j, i] = A[j, i]
 			U[i, j] = A[i, j] if i !=j else 0.0
 
+	# Calculate the Inverse of L (it's needed to Gauss-Seidel method).
 	try:
 		Linv = L.I
 	except:
 		print('Error: \'L\' (lower triangular matrix) is singular!')
 		return None
 
-	xCur = copy.deepcopy(x0)
+	# Init some necessary variables
+	xCur = x0
 	i = 0
-	err = epsilon * 2.0
+	err = epsilon * 2.0 + 1.0
 
+	# Stuff for user interface
 	errorType = 'Relative' if relativeError else 'Infinite Norm'
-
 	if showError:
 		print('#        :', errorType, 'error:')
 
+	# Gauss-Seidel numeric method implementation
 	while i < itMax and err > epsilon:
 		i += 1
+		# Calculate a (theoretically, supposing the process will converge)
+		# better x approximation based on the old x.
 		xNew = Linv * (b - U * xCur)
+
+		# Calculate the iteration error (defaults to Infinite Norm error,
+		# but can be used the Relative Error instead. Check error function
+		# for more detail.)
 		err = error(xNew, xCur, relative=relativeError)
+
+		# Update current x approximation.
 		xCur = xNew
+
+		# User interface stuff (print each iteration error if '-s' 
+		# options is selected).
 		if showError:
 			print('{val:<{fill}}'.format(val=i, fill=8), ':', float(err))
-	
+		# Repeat till one of the stop criteria is reached.	
+
+	# User interface statistics
 	print('Process finished. ', end='')
 	if err <= epsilon:
 		print('(algorithm converged to a', errorType, 'error', 
@@ -75,8 +106,19 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeErro
 	else:
 		print('(max number of iterations reached: ' + str(itMax) + ')')
 
+	# Return the last x approximation
 	return xCur
 
+# Calculates the Infinite Norm or Relative Error of a Gauss-Seidel iteration
+def error(a, b, delta=1e-13, relative=False):
+	denominator = (max(a) + delta) if relative else 1.0
+	return max(a - b)/denominator
+
+# Init a rownum x colnum matrix with all values equals to 'val'
+def minit(rownum, colnum, val=0.0):
+	return np.matrix([[val] * colnum for i in range(rownum)])
+
+# Read matrix values from a given filepath
 def __readfile__(filepath):
 	values = []
 	with open(filepath, 'r') as f:
@@ -84,8 +126,10 @@ def __readfile__(filepath):
 			values.append(lines.split())
 	return np.matrix(values, dtype=float)
 
+# Gather all data needed to perform the official problem specifications experiments
 def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 	if Afp and bfp:
+		# In case the user specify a particular A and b matrices
 		A = __readfile__(Afp)
 		b = __readfile__(bfp)
 	else:
@@ -107,6 +151,7 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 		A = np.matrix(A)
 		b = np.matrix([[1.0/(1.0 + i)] for i in range(n)]) 
 	if x0fp:
+		# In case user specify a particular starting approximation of x
 		x0 = __readfile__(x0fp) 
 	else:
 		bnRow, bnCol = b.shape
@@ -114,27 +159,29 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 		x0 = np.matrix([[0.0] for i in range(bnRow)]) 
 	return A, b, x0
 
+# Show problem help (used when user call the program using '-h' or '--help' options)
 def __showHelp__():
 	print('Gauss-Seidel Method for Linear System Solving by Felipe Alves Siqueira')
 	print('Program usage:', sys.argv[0], 
 		'[-a matrixFilepath] [-b vectorFilepath] [-x x0Filepath]',
-		'[-n matrixSize] [-i itMax] [-e epsilon]')
+		'[-n matrixSize] [-i itMax] [-e epsilon] [-s (show error each iteration)] [-r (use Relative Error)]')
 	print('Options:',
 		'-a:\tfull filepath of the coefficient matrix \'A\'. Default is the Pentadiagonal Matrix defined in problem specification.',
 		'-b:\tfull filepath of the solution vector \'b\'. Default is 1.0/i for i= {1, ..., n}',
 		'-x:\tinitial approximation of Gauss-Seidel solution. Default is the zero vector in R^n.',
 		'-n:\tdimension of \'A\', \'b\' and \'x0\' for default values when filepaths was not specified. Default is 10.',
 		'-i:\tmaximum iteration of Gauss-Seidel method. Default is 100.',
-		'-e:\tmaximum error on a single Gauss-Seidel iteration. Default is 1e^-5 as \'Infinite Norm error\' (||a - b||[inf]).', 
+		'-e:\tmaximum error on a single Gauss-Seidel iteration. Default is 1e^-10 as \'Infinite Norm error\' (||a - b||[inf]).', 
 		'-s:\tshow error each iteration of Gauss-Seidel method.',
 		'-r:\tset error to be \'Relative Error\' (||a - b||[inf]/||a||[inf]) instead of \'Infinite Norm Error\' (||a - b||[inf]).',
 		sep='\n')
 
+# Translate user command line arguments into real program parameters
 def translateArgs(argv):
 	param = {
 		'-n': 10, 
 		'-i': 100, 
-		'-e': 1e-5,  
+		'-e': 1e-10,  
 		'-a': None, 
 		'-x': None, 
 		'-b': None, 
@@ -200,12 +247,17 @@ def translateArgs(argv):
 
 		return n, epsilon, itMax, Afp, bfp, x0fp, showError, relativeError
 
+# Program driver
 if __name__ == '__main__':
+	# Get needed parameters based on user command line arguments
 	n, epsilon, itMax, Afp, bfp, x0fp, showError, relativeError = translateArgs(sys.argv)
 	if n or Afp:
+		# Fill A, b and x0 matrices with properly data
 		A, b, x0 = initProblemMatrices(n, Afp, bfp, x0fp)
 		if len(A) and len(b) and len(x0):
+			# Runs Gauss-Seidel numeric method, trying to solve Ax=b, if possible
 			r = gaussSeidel(A, b, x0, itMax, epsilon, showError, relativeError)
 			if type(r) is np.matrix:
+				# Print problem answer.
 				print(r)
 
