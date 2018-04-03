@@ -39,7 +39,26 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeErro
 			'and vectors \'b\' and \'x0\' must be size compatible (in R^n).')
 		return None
 
+
 	n = ArowNum
+	# Make sure that a[i][i] != 0 for all i = 1, ..., n
+	for i in range(n):
+		# If A has a null element and main diagonal...
+		if A[i, i] == 0:
+			# Then search for a row below current row for a non-null element...
+			j = i
+			while j < n and A[j, i] == 0:
+				j += 1
+			# And try to do a line swap (remebering to swap rows i and j at A and b)
+			if j < n and A[j, i] != 0:
+				A[i], A[j] = A[j], A[i]
+				b[i], b[j] = b[j], b[i]
+			else:
+				# If swap fails, then the Gauss-Seidel method won't work anyway,
+				# then quit function.
+				print('Error: sorry, but Gauss-Seidel method won\'t',
+					'work for this matrix A (can\'t swap zeros at main diagonal).')
+				return None
 
 	# Init L (Lower-triangular) and U (Upper-triangular matrices)
 	L = minit(n, n)
