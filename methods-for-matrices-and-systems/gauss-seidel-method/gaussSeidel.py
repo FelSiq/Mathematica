@@ -129,10 +129,13 @@ def __readfile__(filepath):
 # Gather all data needed to perform the official problem specifications experiments
 def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 	if Afp and bfp:
+		print('Note: Reading user A (\''+Afp+'\') and b (\''+bfp+'\') matrices...')
 		# In case the user specify a particular A and b matrices
 		A = __readfile__(Afp)
 		b = __readfile__(bfp)
 	else:
+		print('Note: Using predefined pentadiagonal A (with n = '+str(n)+') and standard b matrices.',
+			'(Tip: change with \'-a\' and \'b\' options).')
 		# Default A: pentadiagonal matrix defined on problem specification
 		# Default b: 1.0/i for i = 1,..., n 
 		A = [[0.0] * n for i in range(n)]
@@ -151,9 +154,11 @@ def initProblemMatrices(n=10, Afp=None, bfp=None, x0fp=None):
 		A = np.matrix(A)
 		b = np.matrix([[1.0/(1.0 + i)] for i in range(n)]) 
 	if x0fp:
+		print('Note: reading user initial approximation x0 (\''+fx0+'\')...')
 		# In case user specify a particular starting approximation of x
 		x0 = __readfile__(x0fp) 
 	else:
+		print('Note: using null vector as initial approximation x0 (Tip: use \'-x\' option to change).')
 		bnRow, bnCol = b.shape
 		# Default x0: zero vector in R^n
 		x0 = np.matrix([[0.0] for i in range(bnRow)]) 
@@ -252,10 +257,17 @@ if __name__ == '__main__':
 	# Get needed parameters based on user command line arguments
 	n, epsilon, itMax, Afp, bfp, x0fp, showError, relativeError = translateArgs(sys.argv)
 	if n or Afp:
+		# User interface messages
+		print('Parameters choosen:\n',
+			'\tEpsilon =', epsilon, '\n',
+			'\tError =', 'Relative' if relativeError else 'Infinite Norm', '\n',
+			'\tMax Iterations =', itMax)
+
 		# Fill A, b and x0 matrices with properly data
 		A, b, x0 = initProblemMatrices(n, Afp, bfp, x0fp)
 		if len(A) and len(b) and len(x0):
 			# Runs Gauss-Seidel numeric method, trying to solve Ax=b, if possible
+			print('\nStarted Gauss-Seidel method...')
 			r = gaussSeidel(A, b, x0, itMax, epsilon, showError, relativeError)
 			if type(r) is np.matrix:
 				# Print problem answer.
