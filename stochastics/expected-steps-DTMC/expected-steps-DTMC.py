@@ -1,6 +1,5 @@
 import sympy
 import sys
-import numpy as np
 import copy
 
 def readMatrix(filepath):
