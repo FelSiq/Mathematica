@@ -15,7 +15,7 @@ gorithm perform, the more precise will be the output.
 """
 
 # Main function of this program. Effectively runs the Gauss-Seidel iterative method
-def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeError=False):
+def gaussSeidel(A, b, x0, itMax=2000, epsilon=1e-5, showError=False, relativeError=False, delta=1.0e-9):
 	if type(A) != np.matrix:
 		print('Error: expecting np.matrix as input matrix \'A\'.')
 		return None
@@ -91,29 +91,42 @@ def gaussSeidel(A, b, x0, itMax=100, epsilon=1e-5, showError=False, relativeErro
 	i = 0
 	err = epsilon * 2.0 + 1.0
 
+	g = Linv * b # Gauss-Seidel method auxiliary iteration vector
+	G = Linv * U # Gauss-Seidel method Iteration matrix
+
+	# Infinite Norm of the iteration Matrix
+	GinfNorm = sum(abs(G)).max()
+
+	# Will be used to calculate Gauss-Seidel iteration error
+	errorCorrection = GinfNorm / (delta + 1.0 - GinfNorm)
+
 	# Stuff for user interface
 	errorType = 'Relative' if relativeError else 'Infinite Norm'
 	if showError:
-		print('#        :', errorType, 'error:')
+		print('#        :', errorType, 
+			'error (w/ correction of', str(errorCorrection) + '):')
+
+	# Define the multiple number for error printing
+	itPrintErr = max(int(itMax/20), 1)
 
 	# Gauss-Seidel numeric method implementation
 	while i < itMax and err > epsilon:
 		i += 1
 		# Calculate a (theoretically, supposing the process will converge)
 		# better x approximation based on the old x.
-		xNew = Linv * (b - U * xCur)
+		xNew = g - G * xCur
 
 		# Calculate the iteration error (defaults to Infinite Norm error,
 		# but can be used the Relative Error instead. Check error function
 		# for more detail.)
-		err = error(xNew, xCur, relative=relativeError)
+		err = errorCorrection * error(xNew, xCur, relative=relativeError)
 
 		# Update current x approximation.
 		xCur = xNew
 
 		# User interface stuff (print each iteration error if '-s' 
 		# options is selected).
-		if showError:
+		if showError and (not (i % itPrintErr) or err <= epsilon):
 			print('{val:<{fill}}'.format(val=i, fill=8), ':', float(err))
 		# Repeat till one of the stop criteria is reached.	
 
