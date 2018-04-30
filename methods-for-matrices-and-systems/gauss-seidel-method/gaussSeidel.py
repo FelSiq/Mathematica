@@ -95,7 +95,7 @@ def gaussSeidel(A, b, x0, itMax=2000, epsilon=1e-5, showError=False, relativeErr
 	G = Linv * U # Gauss-Seidel method Iteration matrix
 
 	# Infinite Norm of the iteration Matrix
-	GinfNorm = sum(abs(G)).max()
+	GinfNorm = abs(G).sum(1).max()
 
 	# Will be used to calculate Gauss-Seidel iteration error
 	errorCorrection = GinfNorm / (delta + 1.0 - GinfNorm)
