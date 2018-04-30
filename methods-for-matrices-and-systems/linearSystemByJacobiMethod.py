@@ -7,10 +7,11 @@ This Algorithm implements the Jacobi Method for linear system solving.
 It's a iterative method.
 """
 
-def relativeError(a, b, delta=1e-9):
-	return max([abs(a[i] - b[i]) for i in range(min(len(a), len(b)))])/(delta + max(a))
+def calcError(a, b, delta=1e-9, relative=True):
+	err = max([abs(a[i] - b[i]) for i in range(min(len(a), len(b)))])
+	return err/((delta + max(a)) if relative else 1.0)
 
-def jacobi(A, b, x0, itMax=100, epsilon=1e-4, showError=False):
+def jacobi(A, b, x0, itMax=100, epsilon=1e-4, showError=False, relativeError=True):
 	n = len(x0)
 	nrow, ncol = matrix.mshape(A)
 	if not (nrow == ncol == n):
@@ -31,24 +32,25 @@ def jacobi(A, b, x0, itMax=100, epsilon=1e-4, showError=False):
 	err = epsilon * 2.0
 	i = 0
 	if showError:
-		print('# :\t Relative error:')
+		print('# :\t', 'Relative' if relativeError else 'Infinite Norm', 'error:')
 	while i < itMax and err > epsilon:
 		i += 1
 		xNew = matrix.mmult(Dinv, (matrix.msub(b, matrix.mmult(M, xCur))))
-		err = relativeError(matrix.mtransp(xNew), matrix.mtransp(xCur))
+		err = calcError(matrix.mtransp(xNew), matrix.mtransp(xCur), relative=relativeError)
 		xCur = xNew
 		if showError:
 			print(i, ':\t', err)
-	return xCur	
+	return xCur
 
 if __name__ == '__main__':
 	M = [
-		[2, 1],
-		[3, 4]
+		[10, 2, 1],
+		[1, 5, 1 ],
+		[2, 3, 10]
 	]
 
-	b = matrix.mtransp([1, -1])
+	b = matrix.mtransp([7, -8, 6])
 
-	x0 = matrix.mtransp([0, 0])
+	x0 = matrix.mtransp([0.7, -1.6, 0.6])
 
-	matrix.mprint(jacobi(M, b, x0, showError=True))
+	matrix.mprint(jacobi(M, b, x0, epsilon=1.0e-2, showError=True, relativeError=False))
