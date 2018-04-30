@@ -29,7 +29,7 @@ def jacobi(A, b, x0, itMax=100, epsilon=1e-4, showError=False, relativeError=Tru
 		Dinv[i][i] = 1.0/A[i][i]
 		M[i][i] = 0.0 # M is (A - D), D is diag(A).
 
-	err = epsilon * 2.0
+	err = epsilon + 1.0
 	i = 0
 	if showError:
 		print('# :\t', 'Relative' if relativeError else 'Infinite Norm', 'error:')
@@ -53,4 +53,4 @@ if __name__ == '__main__':
 
 	x0 = matrix.mtransp([0.7, -1.6, 0.6])
 
-	matrix.mprint(jacobi(M, b, x0, epsilon=1.0e-2, showError=True, relativeError=False))
+	matrix.mprint(jacobi(M, b, x0, epsilon=0, showError=True, relativeError=False))
