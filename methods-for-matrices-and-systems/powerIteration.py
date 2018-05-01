@@ -1,6 +1,13 @@
 import sys
 import numpy as np
 
+"""
+This code implements the Power Iteration method, that receives a
+(square) matrix A and a initial approximation vector x0 = [x1 ... xn]^T
+and outputs an approximation of the absolute value of the highest
+eigenvalue of A.
+"""
+
 def readMatrix(filepath, sep=' '):
 	m = []
 	with open(filepath, 'r') as f:
