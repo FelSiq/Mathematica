@@ -79,15 +79,18 @@ if __name__ == "__main__":
 	F = re.sub(r"\bx\b", "(x)", sys.argv[4])
 
 	approxFunc = mmq(x, y, f, F)
-	print("Approximated function: ", approxFunc)
+	print("Approximated function: ", F, "=", approxFunc)
 
 	if len(sys.argv) >= 6:
 		vlist = list(map(float, sys.argv[5].split(" ")))
 		print("Evaluating given values on the approximated function:")
 		for val in vlist:
-			print("f(" + str(val) + ")=", 
+			print(re.sub(r"\bx\b", str(val), F), "=", 
 				ro.r(re.sub(r"\bx\b", str(val), approxFunc))[0])
 
 	# Result plot
 	intInc=(max(x)-min(x))*0.15
-	plot(approxFunc, xlim=(min(x)-intInc, max(x)+intInc), points=(x, y))	
+
+
+	y_t=list(ro.r(re.sub(r"\bx\b", "c("+",".join(map(str, y))+")", F)))
+	plot(approxFunc, xlim=(min(x)-intInc, max(x)+intInc), points=(x, y_t))	
