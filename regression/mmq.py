@@ -79,7 +79,7 @@ if __name__ == "__main__":
 	F = re.sub(r"\bx\b", "(x)", sys.argv[4])
 
 	approxFunc = mmq(x, y, f, F)
-	print("Approximated function: ", F, "=", approxFunc)
+	print("Approximated function: ", re.sub(r"\(x\)", "f(x)", F), "=", approxFunc)
 
 	if len(sys.argv) >= 6:
 		vlist = list(map(float, sys.argv[5].split(" ")))
