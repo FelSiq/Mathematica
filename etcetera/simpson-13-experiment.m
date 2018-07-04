@@ -58,8 +58,8 @@ function res = newton (x0 = .5, EPS = 10e-10, fun = @f)
 
 	while (err > EPS)
 		x_new = x_cur - F(a = 0, b = x_cur, fun = fun)/f(x_cur);
-		err = x_new - x_cur
-		x_cur = x_new;
+		err = abs(x_new - x_cur)
+		x_cur = x_new
 	endwhile
 
 	res = x_cur;
