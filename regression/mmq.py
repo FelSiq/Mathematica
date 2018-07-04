@@ -27,6 +27,7 @@ def genNormalEquationSystem(phiVectors, y):
 		for j in range(n):
 			nes[i, j] = np.dot(phiVectors[i], 
 				phiVectors[j])
+
 	return nes, np.array(b)
 
 def mmq(x, y, f):
@@ -34,9 +35,11 @@ def mmq(x, y, f):
 	nes, b = genNormalEquationSystem(pv, y)
 	coeffs = np.linalg.solve(nes, b)
 	approxFun = ''
+
 	for i in range(len(coeffs)):
-		approxFun += '(' + str(coeffs[i]) + ')*' + f[i] + ' + '
-	return approxFun[:-2]
+		approxFun += '(' + str(coeffs[i]) + ')*(' + f[i] + ') + '
+
+	return approxFun[:-3]
 
 def plot(fun, xlim=(-10.0, 10.0), num=1000, points=(None, None)):
     x=[]
@@ -64,7 +67,7 @@ if __name__ == '__main__':
 	# m+1 points
 	x = list(map(float, sys.argv[1].split(' ')))
 	y = list(map(float, sys.argv[2].split(' ')))
-	f = sys.argv[3].split(' ')
+	f = [re.sub(r'\bx\b', '(x)', f) for f in sys.argv[3].split(' ')]
 
 	approxFunc = mmq(x, y, f)
 	print('Approximated function: ', approxFunc)
