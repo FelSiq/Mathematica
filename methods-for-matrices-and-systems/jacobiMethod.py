@@ -37,7 +37,12 @@ def jacobi(A, b, x0, itMax=100, epsilon=1e-4, showError=False, relativeError=Tru
 	CinfNorm = abs(C).sum(1).max()
 
 	# This is a error estimation auxiliary constant value
-	errAux = CinfNorm / (1.0 - CinfNorm + delta)	
+	errAux = CinfNorm / (1.0 - CinfNorm + delta)
+
+	if not (0.0 < errAux):
+		print('Warning: Jacobi method may diverge with this matrix.',
+			'Error adjust coefficient:', errAux)
+		errAux = 1.0
 
 	# Multiple value of which the error should be printed.
 	itToPrint = max(int(itMax/20), 1)
