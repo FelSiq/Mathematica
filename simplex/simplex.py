@@ -67,24 +67,39 @@ class Simplex:
             cost_func_coeffs, 
             coeffs_matrix, 
             non_basis_indexes,
-            lambda_vector):
+            lambda_vector,
+            epsilon=1.0e-9):
 
         # "k" is the index of a non-basis variable cadidate
         # to enter the basis (it has negative cost associated, 
         # supposing we're solving a MINIMIZATION problem)
-        k_index = -1
-
+        potential_alt_sol = -1
         for non_basis_index in non_basis_indexes:
             cur_cost = cost_func_coeffs[non_basis_index] -\
                     np.dot(lambda_vector.T, coeffs_matrix[:, non_basis_index])
 
             if cur_cost < 0:
-                k_index = non_basis_index
-                break
+                # Found an negative cost associated with an
+                # variable, pick it to enter the new basis
+                return False, non_basis_index
 
-        return k_index
+            elif potential_alt_sol < 0 and abs(cur_cost) <= epsilon:
+                # Null costs may imply in alternative optimum
+                # solutions. If no negative cost is found, then
+                # try to find another optimal solution
+                potential_alt_sol = non_basis_index
 
-    def solve(cost_func_coeffs, coeffs_matrix, b_vector):
+        return True, potential_alt_sol
+
+    def build_answer(cur_solution_vector, basis_indexes, size):
+        new_answer = np.zeros(size)
+
+        for vec_index, basis_index in enumerate(basis_indexes):
+            new_answer[basis_index] = cur_solution_vector[vec_index]
+
+        return new_answer
+
+    def solve(cost_func_coeffs, coeffs_matrix, b_vector, epsilon=1.0e-9):
         """
             Suppose A * x = b, x >= 0
 
@@ -114,7 +129,8 @@ class Simplex:
         # 0. Obtain an initial Feasible Initial Solution
         basis_indexes, non_basis_indexes =\
                 Simplex.initial_feasible_sol(coeffs_matrix)
-        x_b = np.linalg.solve(coeffs_matrix[:, basis_indexes], b_vector)
+        cur_solution_vector = np.linalg.solve(\
+                coeffs_matrix[:, basis_indexes], b_vector)
 
         while True:
             # 1. Verify if it is optimal
@@ -123,27 +139,41 @@ class Simplex:
                     coeffs_matrix[:, basis_indexes].T, 
                     cost_func_coeffs[basis_indexes])
 
-            k_index = Simplex.non_basis_candidate(
-                    cost_func_coeffs, 
-                    coeffs_matrix,
-                    non_basis_indexes,
-                    lambda_vector)
+            alternative, basis_in_index =\
+                    Simplex.non_basis_candidate(
+                        cost_func_coeffs, 
+                        coeffs_matrix,
+                        non_basis_indexes,
+                        lambda_vector)
 
-            if k_index < 0:
+            if basis_in_index < 0 or alternative:
                 # No non-basis variable candidate to enter the basis:
                 # we're in the optimal solution.
-                solutions.append(x_b)
-                return solutions
+                cur_solution_vector = np.linalg.solve(
+                        coeffs_matrix[:, basis_indexes], 
+                        b_vector)
+
+                new_solution = Simplex.build_answer(
+                        cur_solution_vector, 
+                        basis_indexes,
+                        coeffs_matrix.shape[1])
+
+                solutions.append(new_solution)
+
+                # If we're trying to find an alternative solution,
+                # proceed
+                if not alternative:
+                    return solutions
 
             # 2. Calculate the "Simplex Direction"
             simplex_dir = np.linalg.solve(
                     coeffs_matrix[:, basis_indexes], 
-                    coeffs_matrix[:, k_index])
+                    coeffs_matrix[:, basis_in_index])
 
             # 3. Calculate the "simplex step size" while checking for
             # unbounded solutions or inexistent alternative optimum 
             # solutions
-            step_size = min([x_b[i]/simplex_dir[i] 
+            step_size = min([cur_solution_vector[i]/simplex_dir[i] 
                 for i in range(len(simplex_dir)) 
                 if simplex_dir[i] > 0])
 
@@ -153,14 +183,26 @@ class Simplex:
                 solutions.append(["Unbounded solution"])
                 return solutions
 
-            if step_size < 0:
+            if step_size <= 0:
                 # In this case, we're probably trying to find
                 # alternatives optima solutions and failed.
                 return solutions
 
-            # Update x_b
-                 
+            # Update cur_solution_vector
+            cur_solution_vector = cur_solution_vector -\
+                    step_size * simplex_dir.reshape(cur_solution_vector.shape)
             
+            # Use the Bland's Rule to find the index
+            # which will leave the base (Bland's rule picks
+            # up the smallest index associated with a null
+            # value in cur_solution_vector)
+            basis_vector_out_index = (abs(cur_solution_vector) <= epsilon).argmax()
+            non_basis_vector_in_index = (non_basis_indexes == basis_in_index).argmax()
+            basis_out_index = basis_indexes[basis_vector_out_index]
+
+            # Swap base and non-basis indexes
+            basis_indexes[basis_vector_out_index] = basis_in_index
+            non_basis_indexes[non_basis_vector_in_index] = basis_out_index
 
         return solutions
 
@@ -190,4 +232,4 @@ if __name__ == "__main__":
 
     ans = Simplex.solve(f, A, b)
 
-    print("Solution:", ans)
+    print("Solution:\n", ans)
