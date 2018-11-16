@@ -54,6 +54,11 @@ class Simplex:
                         np.concatenate((aux_coeffs[:-1], dummy_coef))
                 b_vector[line_index,:] = aux_coeffs[-1]
 
+        if not minimization:
+            # If maximization problem, just multiply the
+            # cost function by -1.0
+            cost_func_coeffs *= -1.0
+
         return cost_func_coeffs, coeff_matrix, b_vector
 
     def initial_feasible_sol(coeffs_matrix, use_dummies=True):
