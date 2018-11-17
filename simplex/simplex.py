@@ -203,8 +203,8 @@ class Simplex:
             # which will leave the base (Bland's rule picks
             # up the smallest index associated with a null
             # value in cur_solution_vector)
-            basis_vector_out_index = (abs(cur_solution_vector) <= epsilon).argmax()
-            non_basis_vector_in_index = (non_basis_indexes == basis_in_index).argmax()
+            basis_vector_out_index = np.where(abs(cur_solution_vector) <= epsilon)[0].min()
+            non_basis_vector_in_index = np.where(non_basis_indexes == basis_in_index)[0].min()
             basis_out_index = basis_indexes[basis_vector_out_index]
 
             # Swap base and non-basis indexes
