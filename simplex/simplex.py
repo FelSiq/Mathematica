@@ -44,16 +44,19 @@ class Simplex:
                 aux_coeffs = np.array(list(map(float, 
                     coeffs_and_op[:-1])))
 
-                if operation == ">":
+                if operation in {">", ">=", "=>"}:
                     # Change the sign of both A and b coeffs to
                     # make operation transform into "<"
                     aux_coeffs *= -1.0
 
-                elif operation == "=":
+                elif operation in {"=", "=="}:
                     # In this case, change the dummy variable
                     # cost in the objective function from 0 to big_m
                     # to evoid using it during the resolution
                     cost_func_coeffs[coeff_mat_dim[0] + line_index] = bigm
+
+                elif operation not in {"<", "<=", "=<"}:
+                    raise ValueError("Unknown operation \"" + operation + "\".")
                 
                 # Assuming the last number of a line is in the
                 # right side of the equation:
