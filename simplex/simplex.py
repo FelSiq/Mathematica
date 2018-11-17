@@ -5,7 +5,7 @@ class Simplex:
         return np.array(list(map(cast_type,
             filepath.readline().strip().split(sep))))
 
-    def read_file(filepath, minimization=True, sep=" "):
+    def read_file(filepath, minimization=True, sep=" ", bigm=1.0e+8):
         """
             Argument description:
             1. minimization: (boolean) whether the problem is 
@@ -23,7 +23,7 @@ class Simplex:
             # Get A matrix dimensions
             coeff_mat_dim = Simplex.__get_line(f, int, sep)
 
-            # Add weight zero to the cost_function_coeffs associated
+            # Add weight "big-M" to the cost_function_coeffs associated
             # to the dummy variables
             cost_func_coeffs = np.concatenate((cost_func_coeffs, 
                 [0] * coeff_mat_dim[0]))
@@ -39,8 +39,21 @@ class Simplex:
                 dummy_coef = np.zeros(coeff_mat_dim[0])
                 dummy_coef[line_index] = 1
 
+                coeffs_and_op = line.strip().split(sep)
+                operation = coeffs_and_op[-1]
                 aux_coeffs = np.array(list(map(float, 
-                    line.strip().split(sep))))
+                    coeffs_and_op[:-1])))
+
+                if operation == ">":
+                    # Change the sign of both A and b coeffs to
+                    # make operation transform into "<"
+                    aux_coeffs *= -1.0
+
+                elif operation == "=":
+                    # In this case, change the dummy variable
+                    # cost in the objective function from 0 to big_m
+                    # to evoid using it during the resolution
+                    cost_func_coeffs[coeff_mat_dim[0] + line_index] = bigm
                 
                 # Assuming the last number of a line is in the
                 # right side of the equation:
@@ -57,15 +70,15 @@ class Simplex:
         if not minimization:
             # If maximization problem, just multiply the
             # cost function by -1.0
-            cost_func_coeffs *= -1.0
+            cost_func_coeffs[:coeff_mat_dim[0]] *= -1.0
 
         return cost_func_coeffs, coeff_matrix, b_vector
 
     def initial_feasible_sol(coeffs_matrix, use_dummies=True):
         # Assuming all original equations is in the form A * x <= b
         m, n = coeffs_matrix.shape
-        basis_indexes = np.array([i for i in range(m-1, n)]) # Expecting m variables
-        non_basis_indexes = np.array([i for i in range(m)]) # Expecting m-n variables
+        basis_indexes = np.array([i for i in range(m)]) # Expecting m variables
+        non_basis_indexes = np.array([i for i in range(m-1, n)]) # Expecting m-n variables
         return basis_indexes, non_basis_indexes
 
     def non_basis_candidate(
@@ -73,7 +86,7 @@ class Simplex:
             coeffs_matrix, 
             non_basis_indexes,
             lambda_vector,
-            epsilon=1.0e-9):
+            epsilon=1.0e-8):
 
         # "k" is the index of a non-basis variable cadidate
         # to enter the basis (it has negative cost associated, 
@@ -154,10 +167,6 @@ class Simplex:
             if basis_in_index < 0 or alternative:
                 # No non-basis variable candidate to enter the basis:
                 # we're in the optimal solution.
-                cur_solution_vector = np.linalg.solve(
-                        coeffs_matrix[:, basis_indexes], 
-                        b_vector)
-
                 new_solution = Simplex.build_answer(
                         cur_solution_vector, 
                         basis_indexes,
@@ -205,6 +214,10 @@ class Simplex:
             non_basis_vector_in_index = (non_basis_indexes == basis_in_index).argmax()
             basis_out_index = basis_indexes[basis_vector_out_index]
 
+            if basis_in_index == basis_out_index or\
+                    (basis_in_index in basis_indexes):
+                return solutions
+
             # Swap base and non-basis indexes
             basis_indexes[basis_vector_out_index] = basis_in_index
             non_basis_indexes[non_basis_vector_in_index] = basis_out_index
@@ -216,22 +229,36 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        print("usage:", sys.argv[0], "<filepath>")
+        print("usage: " + sys.argv[0] + "<filepath>",
+                "[-sep separator, default is empty space]",
+                "[-bigm big_m_value (float), default is 1.0e+9]",
+                "[-max]", sep="\n\t")
         exit(1)
-
     
-    """
-    First supposing:
-        - Always a minimization problem
-        - Always in the form Ax <= b
+    try:
+        big_m_val = float(sys.argv[1 + sys.argv.index("-bigm")])
+    except:
+        big_m_val = 1.0e+9
 
-    Input file format:
-    """
+    try:
+        sep = sys.argv[1 + sys.argv.index("-sep")]
+    except:
+        sep = " "
 
-    f, A, b = Simplex.read_file(sys.argv[1])
+    minimize = "-max" not in sys.argv
+
+    f, A, b = Simplex.read_file(sys.argv[1], 
+            minimization=minimize,
+            bigm=big_m_val)
 
     print("Problem setup:", sep="\n", end=2*"\n")
-    print("Function coeffs to minimize:", f, sep="\n", end=2*"\n")
+
+    if minimize:
+        print("Function coeffs to minimize:", f, sep="\n", end=2*"\n")
+
+    else:
+        print("Function coeffs to maximize:", f * -1.0, sep="\n", end=2*"\n")
+
     print("Coeffs matrix in normal form:", A, sep="\n", end=2*"\n")
     print("b vector coefficients (from Ax = b):", b, sep="\n")
 
