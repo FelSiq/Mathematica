@@ -91,9 +91,17 @@ class Simplex:
             lambda_vector,
             epsilon=1.0e-8):
 
-        # chosen index will be the index of a non-basis variable cadidate
-        # to enter the basis (it has negative cost associated, 
+        # Chosen index ("basis_in_index") will be the index of a non-basis 
+	# variable cadidate to enter the basis (it has negative cost associated, 
         # supposing we're solving a MINIMIZATION problem)
+        basis_in_index = -1
+
+        # "possible_alt_sol" flag indicates that an possible alternative optimal 
+        # solution may exists (represented by a variable with cost 0).
+        # This variable is only chosen if there's no negative costs asso-
+        # citated to any non-basic variables.
+        possible_alt_sol = False
+
         for non_basis_index in sorted(non_basis_indexes):
             cur_cost = cost_func_coeffs[non_basis_index] -\
                     np.dot(lambda_vector.T, coeffs_matrix[:, non_basis_index])
@@ -101,9 +109,22 @@ class Simplex:
             if cur_cost < 0:
                 # Found an negative cost associated with an
                 # variable, pick it to enter the new basis
-                return non_basis_index
+                basis_in_index = non_basis_index
+                possible_alt_sol = False
+                break
 
-        return -1
+            elif abs(cur_cost) < epsilon:
+                basis_in_index = non_basis_index
+                possible_alt_sol = True
+
+        return possible_alt_sol, basis_in_index
+
+    def __check_loop(new_solution, solutions):
+        for sol in solutions:
+            if np.all(new_solution == solutions):
+                return True
+
+        return False
 
     def build_answer(cur_solution_vector, basis_indexes, size):
         new_answer = np.zeros(size)
@@ -144,34 +165,42 @@ class Simplex:
         basis_indexes, non_basis_indexes =\
                 Simplex.initial_feasible_sol(coeffs_matrix)
 
+        # Initial solution based on initial basis
         cur_solution_vector = np.linalg.solve(\
                 coeffs_matrix[:, basis_indexes], b_vector)
-        step_size=-1
-        while True:
+
+        done = False
+        while not done:
             # 1. Verify if it is optimal
             # B^T * lambda = cost_base_indexes
             lambda_vector = np.linalg.solve(
                     coeffs_matrix[:, basis_indexes].T, 
                     cost_func_coeffs[basis_indexes])
 
-            basis_in_index =\
+            possible_alt_sol, basis_in_index =\
                     Simplex.non_basis_candidate(
                         cost_func_coeffs, 
                         coeffs_matrix,
                         non_basis_indexes,
                         lambda_vector)
 
-            if basis_in_index < 0:
+            if basis_in_index < 0 or possible_alt_sol:
                 # No non-basis variable candidate to enter the basis:
                 # we're in the optimal solution.
-
                 new_solution = Simplex.build_answer(
                         cur_solution_vector, 
                         basis_indexes,
                         coeffs_matrix.shape[1])
 
-                solutions.append(new_solution)
-                return solutions
+                check_loop = Simplex.__check_loop(new_solution, solutions)
+                if not check_loop:
+                    solutions.append(new_solution)
+
+                else:
+                    possible_alt_sol = False
+
+                if not possible_alt_sol:
+                    done = True
 
             # 2. Calculate the "Simplex Direction"
             simplex_dir = np.linalg.solve(
@@ -189,61 +218,70 @@ class Simplex:
                 # There's no positive simples direction coordinates,
                 # this is caused by an unbounded solution
                 solutions.append(["Unbounded solution"])
-                return solutions
+                done = True
 
-            if step_size < 0:
+            elif step_size < 0:
                 # In this case, we're probably trying to find
                 # alternatives optima solutions and failed.
-                return solutions
+                done = True
 
-            # Update cur_solution_vector
-            cur_solution_vector = cur_solution_vector -\
-                    step_size * simplex_dir.reshape(cur_solution_vector.shape)
-            
-            # Use the Bland's Rule to find the index
-            # which will leave the base (Bland's rule picks
-            # up the smallest index associated with a null
-            # value in cur_solution_vector)
-            basis_vector_out_index = np.where(abs(cur_solution_vector) <= epsilon)[0].min()
-            non_basis_vector_in_index = np.where(non_basis_indexes == basis_in_index)[0].min()
-            basis_out_index = basis_indexes[basis_vector_out_index]
+            if not done:
+                # Update cur_solution_vector
+                cur_solution_vector = cur_solution_vector -\
+                        step_size * simplex_dir.reshape(cur_solution_vector.shape)
+                
+                # Use the Bland's Rule to find the index
+                # which will leave the base (Bland's rule picks
+                # up the smallest index associated with a null
+                # value in cur_solution_vector)
+                basis_vector_out_index = np.where(abs(cur_solution_vector) <= epsilon)[0].min()
+                non_basis_vector_in_index = np.where(non_basis_indexes == basis_in_index)[0].min()
+                basis_out_index = basis_indexes[basis_vector_out_index]
 
-            # Swap base and non-basis indexes
-            basis_indexes[basis_vector_out_index] = basis_in_index
-            non_basis_indexes[non_basis_vector_in_index] = basis_out_index
+                # Swap base and non-basis indexes
+                basis_indexes[basis_vector_out_index] = basis_in_index
+                non_basis_indexes[non_basis_vector_in_index] = basis_out_index
 
-            # Set the solution vector position corresponding the
-            # brand-new variable to step_size
-            cur_solution_vector[basis_vector_out_index] = step_size
+                # Set the solution vector position corresponding the
+                # brand-new variable to step_size
+                cur_solution_vector[basis_vector_out_index] = step_size
 
         return solutions
-
 
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) < 2:
-        print("usage: " + sys.argv[0] + "<filepath>",
-                "[-sep separator, default is empty space]",
-                "[-bigm big_m_value (float), default is 1.0e+9]",
-                "[-max]", sep="\n\t")
+    if len(sys.argv) < 2 or "--help" in sys.argv or "-h" in sys.argv:
+        print("usage: " + sys.argv[0] + " <filepath>",
+                "[--sep separator, default is empty space]",
+                "[--bigm big_m_value (float), default is 1.0e+9]",
+                "[--max, disabled by default]", sep="\n\t")
+        print("Where:", 
+            "--sep: symbol to be used as separator amongst elements in input file.", 
+            "--bigm: some big value to apply into dummy variables related to equa-",
+            "	llity constraints at objective function to prevent they appear in",
+            "	final resolution.",
+            "--max: flag which indicates that the problem demands maximization of",
+            "	objective function instead of minimization (which are applied by",
+            "	default).", sep="\n\t")
         exit(1)
     
     try:
-        big_m_val = float(sys.argv[1 + sys.argv.index("-bigm")])
+        big_m_val = float(sys.argv[1 + sys.argv.index("--bigm")])
     except:
         big_m_val = 1.0e+9
 
     try:
-        sep = sys.argv[1 + sys.argv.index("-sep")]
+        sep = sys.argv[1 + sys.argv.index("--sep")]
     except:
         sep = " "
 
-    minimize = "-max" not in sys.argv
+    minimize = "--max" not in sys.argv
 
     f, A, b = Simplex.read_file(sys.argv[1], 
             minimization=minimize,
-            bigm=big_m_val)
+            bigm=big_m_val,
+            sep=sep)
 
     print("Problem setup:", sep="\n", end=2*"\n")
 
@@ -258,4 +296,9 @@ if __name__ == "__main__":
 
     ans = Simplex.solve(f, A, b)
 
-    print("Solution:\n", ans)
+    print("\nSolutions:")
+    if len(ans) > 1:
+        for index, item in enumerate(ans):
+            print(index, " : ", item)
+    else:
+        print(ans[0])
