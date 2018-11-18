@@ -146,7 +146,7 @@ class Simplex:
 
         cur_solution_vector = np.linalg.solve(\
                 coeffs_matrix[:, basis_indexes], b_vector)
-
+        step_size=-1
         while True:
             # 1. Verify if it is optimal
             # B^T * lambda = cost_base_indexes
@@ -164,8 +164,6 @@ class Simplex:
             if basis_in_index < 0:
                 # No non-basis variable candidate to enter the basis:
                 # we're in the optimal solution.
-                cur_solution_vector = np.linalg.solve(\
-                        coeffs_matrix[:, basis_indexes], b_vector)
 
                 new_solution = Simplex.build_answer(
                         cur_solution_vector, 
@@ -213,6 +211,10 @@ class Simplex:
             # Swap base and non-basis indexes
             basis_indexes[basis_vector_out_index] = basis_in_index
             non_basis_indexes[non_basis_vector_in_index] = basis_out_index
+
+            # Set the solution vector position corresponding the
+            # brand-new variable to step_size
+            cur_solution_vector[basis_vector_out_index] = step_size
 
         return solutions
 
